@@ -1,0 +1,94 @@
+;-------------------------------------------------------------------------
+; XunYouNdis.INF -- Sample NDIS Protocol Driver
+;
+; Copyright (c) 2003, Microsoft Corporation
+;-------------------------------------------------------------------------
+[version]
+Signature   = "$Windows NT$"
+Class       = NetTrans
+ClassGUID   = {4d36e975-e325-11ce-bfc1-08002be10318}
+Provider    = %Msft%
+DriverVer   =10/20/2016,6.1.7600.16385
+CatalogFile=XunYouNdis.cat
+CatalogFile.NTx86=XunYouNdisX86.cat
+CatalogFile.NTIA64=XunYouNdisI64.cat
+CatalogFile.NTAMD64=XunYouNdisX64.cat
+
+[Manufacturer]
+%Msft%=MSFT,NTx86,NTia64,NTamd64
+
+[MSFT.NTx86]
+%XunYouNdis_Desc%=Install, MS_XunYouNdis
+
+[MSFT.NTia64]
+%XunYouNdis_Desc%=Install, MS_XunYouNdis
+
+[MSFT.NTamd64]
+%XunYouNdis_Desc%=Install, MS_XunYouNdis
+
+;-------------------------------------------------------------------------
+; Installation Section
+;-------------------------------------------------------------------------
+[Install]
+AddReg=Inst_Ndi
+Characteristics=0x0 ; 
+CopyFiles=CpyFiles_Sys
+
+;-------------------------------------------------------------------------
+; Ndi installation support
+;-------------------------------------------------------------------------
+[Inst_Ndi]
+HKR,Ndi,Service,,"XunYouNdis"
+HKR,Ndi,HelpText,,%XunYouNdis_HelpText%
+HKR,Ndi\Interfaces, UpperRange,, noupper
+HKR,"Ndi\Interfaces","LowerRange",,"ndis5,ndis4,ndis5_prot"
+
+;-------------------------------------------------------------------------
+; Service installation support
+;-------------------------------------------------------------------------
+[Install.Services]
+AddService=XunYouNdis,,XunYouNdis_Service_Inst
+
+[XunYouNdis_Service_Inst]
+DisplayName     = %XunYouNdis_Desc%
+ServiceType     = 1 ;SERVICE_KERNEL_DRIVER
+StartType       = 3 ;SERVICE_DEMAND_START
+ErrorControl    = 1 ;SERVICE_ERROR_NORMAL
+ServiceBinary   = %12%\XunYouNdis.sys
+LoadOrderGroup  = NDIS
+Description     = %XunYouNdis_Desc%
+
+[Install.Remove.Services]
+DelService=XunYouNdis,0x200
+
+;-------------------------------------------------------------------------
+; Declare Destination Directories for file copy/deletion
+;-------------------------------------------------------------------------
+[SourceDisksNames]
+1=%DiskDescription%,"",,
+
+[SourceDisksFiles]
+XunYouNdis.sys=1
+
+
+[DestinationDirs]
+CpyFiles_Sys    = 12    ; DIRID_DRIVERS
+
+
+;-------------------------------------------------------------------------
+; Files to Copy/Delete - Referenced by Install and Remove sections above
+;-------------------------------------------------------------------------
+[CpyFiles_Sys]
+XunYouNdis.sys,,,2
+
+[Strings]
+Msft = "Microsoft"
+DiskDescription = "Microsoft XunYouNdis Sample Protocol Driver Disk"
+XunYouNdis_Desc = "XunYouNdis NDIS Protocol Driver"
+XunYouNdis_HelpText = "A driver to support user-mode I/O on NDIS devices"
+
+
+
+
+
+

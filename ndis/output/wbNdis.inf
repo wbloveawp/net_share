@@ -1,0 +1,90 @@
+;-------------------------------------------------------------------------
+; wbNdis.INF -- Sample NDIS Protocol Driver
+;
+; Copyright (c) 2003, Microsoft Corporation
+;-------------------------------------------------------------------------
+[version]
+Signature   = "$Windows NT$"
+Class       = NetTrans
+ClassGUID   = {4d36e975-e325-11ce-bfc1-08002be10318}
+Provider    = %Msft%
+DriverVer   =11/03/2021,6.1.7600.16385
+
+[Manufacturer]
+%Msft%=MSFT,NTx86,NTia64,NTamd64
+
+[MSFT.NTx86]
+%wbNdis_Desc%=Install, MS_wbNdis
+
+[MSFT.NTia64]
+%wbNdis_Desc%=Install, MS_wbNdis
+
+[MSFT.NTamd64]
+%wbNdis_Desc%=Install, MS_wbNdis
+
+;-------------------------------------------------------------------------
+; Installation Section
+;-------------------------------------------------------------------------
+[Install]
+AddReg=Inst_Ndi
+Characteristics=0x0 ; 
+CopyFiles=CpyFiles_Sys
+
+;-------------------------------------------------------------------------
+; Ndi installation support
+;-------------------------------------------------------------------------
+[Inst_Ndi]
+HKR,Ndi,Service,,"wbNdis"
+HKR,Ndi,HelpText,,%wbNdis_HelpText%
+HKR,Ndi\Interfaces, UpperRange,, noupper
+HKR,"Ndi\Interfaces","LowerRange",,"ndis5,ndis4,ndis5_prot"
+
+;-------------------------------------------------------------------------
+; Service installation support
+;-------------------------------------------------------------------------
+[Install.Services]
+AddService=wbNdis,,wbNdis_Service_Inst
+
+[wbNdis_Service_Inst]
+DisplayName     = %wbNdis_Desc%
+ServiceType     = 1 ;SERVICE_KERNEL_DRIVER
+StartType       = 3 ;SERVICE_DEMAND_START
+ErrorControl    = 1 ;SERVICE_ERROR_NORMAL
+ServiceBinary   = %12%\wbNdis.sys
+LoadOrderGroup  = NDIS
+Description     = %wbNdis_Desc%
+
+[Install.Remove.Services]
+DelService=wbNdis,0x200
+
+;-------------------------------------------------------------------------
+; Declare Destination Directories for file copy/deletion
+;-------------------------------------------------------------------------
+[SourceDisksNames]
+1=%DiskDescription%,"",,
+
+[SourceDisksFiles]
+wbNdis.sys=1
+
+
+[DestinationDirs]
+CpyFiles_Sys    = 12    ; DIRID_DRIVERS
+
+
+;-------------------------------------------------------------------------
+; Files to Copy/Delete - Referenced by Install and Remove sections above
+;-------------------------------------------------------------------------
+[CpyFiles_Sys]
+wbNdis.sys,,,2
+
+[Strings]
+Msft = "Microsoft"
+DiskDescription = "Microsoft wbNdis Sample Protocol Driver Disk"
+wbNdis_Desc = "wbNdis NDIS Protocol Driver"
+wbNdis_HelpText = "A driver to support user-mode I/O on NDIS devices"
+
+
+
+
+
+

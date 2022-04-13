@@ -1,0 +1,90 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="源文件">
+      <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
+      <Extensions>cpp;c;cc;cxx;c++;cppm;ixx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
+    </Filter>
+    <Filter Include="头文件">
+      <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
+      <Extensions>h;hh;hpp;hxx;h++;hm;inl;inc;ipp;xsd</Extensions>
+    </Filter>
+    <Filter Include="资源文件">
+      <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
+      <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
+    </Filter>
+    <Filter Include="基本组件">
+      <UniqueIdentifier>{e761a925-6902-4fdc-b5f1-6bc98954df96}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="网络封包对象">
+      <UniqueIdentifier>{9278cf3e-cdcd-4d02-bcc8-5b31736f8951}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="网卡">
+      <UniqueIdentifier>{566f3845-cd9f-474d-b159-d57224ece5c7}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="io">
+      <UniqueIdentifier>{17205df5-5307-4ca1-acab-02ecdfa3b3a5}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="net_share.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="evn_init.cpp">
+      <Filter>基本组件</Filter>
+    </ClCompile>
+    <ClCompile Include="net_pack.cpp">
+      <Filter>网络封包对象</Filter>
+    </ClCompile>
+    <ClCompile Include="net_link.cpp">
+      <Filter>网络封包对象</Filter>
+    </ClCompile>
+    <ClCompile Include="net_filter.cpp">
+      <Filter>网络封包对象</Filter>
+    </ClCompile>
+    <ClCompile Include="main.cpp">
+      <Filter>头文件</Filter>
+    </ClCompile>
+    <ClCompile Include="net_card.cpp">
+      <Filter>网卡</Filter>
+    </ClCompile>
+    <ClCompile Include="base_component.cpp">
+      <Filter>基本组件</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="net_base.h">
+      <Filter>基本组件</Filter>
+    </ClInclude>
+    <ClInclude Include="base_component.h">
+      <Filter>基本组件</Filter>
+    </ClInclude>
+    <ClInclude Include="evn_init.h">
+      <Filter>基本组件</Filter>
+    </ClInclude>
+    <ClInclude Include="net_pack.h">
+      <Filter>网络封包对象</Filter>
+    </ClInclude>
+    <ClInclude Include="net_link.h">
+      <Filter>网络封包对象</Filter>
+    </ClInclude>
+    <ClInclude Include="net_api.hpp">
+      <Filter>网络封包对象</Filter>
+    </ClInclude>
+    <ClInclude Include="net_filter.h">
+      <Filter>网络封包对象</Filter>
+    </ClInclude>
+    <ClInclude Include="main.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="wb_io.hpp">
+      <Filter>io</Filter>
+    </ClInclude>
+    <ClInclude Include="net_card.h">
+      <Filter>网卡</Filter>
+    </ClInclude>
+    <ClInclude Include="base_def.h">
+      <Filter>基本组件</Filter>
+    </ClInclude>
+  </ItemGroup>
+</Project>
