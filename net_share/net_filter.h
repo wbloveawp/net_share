@@ -25,6 +25,7 @@ public:
 	void back_data_pack(wb_data_pack* p) { _mdp.recover_mem(p); };
 
 	virtual void post_write(wb_link_interface* plink, const ETH_PACK* pk, int len) { _p_nci->post_write(this, plink, pk, len); };
+	//virtual void post_write(wb_link_interface* plink, const ETH_PACK* pk, const int& len) { _p_nci->post_write(this, plink, pk, len); };//
 	virtual bool post_send_no_copy(wb_link_interface* plink, void* const lp_link, char* buf, int len) { return true; }
 	virtual bool post_send_ex(wb_link_interface* plink, void* const lp_link, const char* buf, int len, void* pd) { return true; }
 	virtual void OnWrite(wb_link_interface* plink, const ETH_PACK* pg, int len) {

@@ -91,7 +91,7 @@ bool wb_udp_link::OnRecv(wb_filter_interface* p_fi, void* const lp_link, const c
 					int out_l = 0;
 					data_len = c_udp_data_len_max;
 					auto mk = make_pack_1st(buf, len, out_l);
-					p_fi->post_write(this,mk, out_l);//
+					p_fi->post_write(this,mk, out_l);//post_write
 
 					++MF_idx;
 				}

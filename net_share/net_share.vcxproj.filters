@@ -42,14 +42,14 @@
     <ClCompile Include="net_filter.cpp">
       <Filter>网络封包对象</Filter>
     </ClCompile>
-    <ClCompile Include="main.cpp">
-      <Filter>头文件</Filter>
-    </ClCompile>
     <ClCompile Include="net_card.cpp">
       <Filter>网卡</Filter>
     </ClCompile>
     <ClCompile Include="base_component.cpp">
       <Filter>基本组件</Filter>
+    </ClCompile>
+    <ClCompile Include="main.cpp">
+      <Filter>源文件</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
