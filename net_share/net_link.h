@@ -8,16 +8,24 @@
 class wb_net_link:public wb_link_interface {
 
 protected:
-	char		_write_buf[MAX_MAC_LEN] = {};//每个连接每次只往网卡投递一个以太网帧
-	ETH_PACK*	_pack = nullptr;	//可以快速复制填充数据
-	IP_HEADER*	_ip_h = nullptr;
-	IP_HEADER	_m_ip_h = {};
-	SOCKET		_socket=INVALID_SOCKET;//
-	USHORT		_pack_id;//当前的包序
-	ustrt_net_base_info _nbi;
-	std::atomic_int64_t	_last_op_time = 0;
+	char					_write_buf[MAX_MAC_LEN] = {};//每个连接每次只往网卡投递一个以太网帧
+	ETH_PACK*				_pack = nullptr;	//可以快速复制填充数据
+	IP_HEADER*				_ip_h = nullptr;
+	IP_HEADER				_m_ip_h = {};
+	SOCKET					_socket=INVALID_SOCKET;//
+	USHORT					_pack_id;//当前的包序
+	std::atomic_int64_t		_last_op_time = 0;
 
-	std::atomic<int> _ref = 0;
+	std::atomic<int>		_ref = 0;//引用计数器
+
+	wb_link_info			_info;
+
+	ustrt_net_base_info&	_nbi= _info.ip_info;
+
+	void*					_pd;
+	//流量统计
+	std::atomic<INT64>		_recv_bytes=0;
+	std::atomic<INT64>		_send_bytes=0;
 public:
 	wb_net_link(const ETH_PACK* pg);
 
@@ -27,6 +35,11 @@ public:
 	explicit operator		ETH_PACK* ()		{ return _pack; }
 	explicit operator const SOCKET()	const   { return _socket;}
 	explicit operator const ustrt_net_base_info& () const { return _nbi; }
+
+
+	virtual void set_data(void* pd) { _pd = pd; };
+	virtual void* get_data() { return _pd; };
+	virtual const wb_link_info& get_link_info() const { return _info; };
 
 	inline int AddRef() { return ++_ref;}
 	inline int DelRef() { return --_ref; }
@@ -50,10 +63,12 @@ public:
 	
 	virtual bool OnRecv(wb_filter_interface* p_fi, void* const lp_link, const char* buf, int len, LPOVERLAPPED pol) {
 		
+		_recv_bytes += len;
 		return true;
 	};//从网卡读取到网络包,len：包总长度
 	virtual bool OnSend(wb_filter_interface* p_fi, void* const lp_link, const char* buf, int len, LPOVERLAPPED pol) {
 		//WLOG("udp数据发送完成:%d\n", len);
+		_send_bytes += len;
 		return true;
 	};//从网卡写完网络包
 
@@ -65,6 +80,11 @@ public:
 	virtual bool is_timeout() { 
 		//assert(0);
 		return true;
+	}
+
+	virtual wb_link_send_recv get_send_recv() const
+	{
+		return { _send_bytes ,_recv_bytes };
 	}
 };
 
@@ -98,15 +118,13 @@ class wb_udp_link :public wb_net_link
 	sockaddr_in			_addr = {};
 	int					_addr_len = sizeof(sockaddr_in);
 
-	std::atomic_int		_psk = 0;
 public:
 	wb_udp_link(const ETH_PACK* pg, const ustrt_net_base_info* pif);
 	virtual ~wb_udp_link() { 
-		//WLOG("~wb_udp_link %p\n",this);
 		close();
 	}
 	virtual bool OnRead(wb_filter_interface* p_fi, void* const lp_link, const ETH_PACK* pk, int len);
-	virtual bool OnSend_no_copy(wb_filter_interface* plink, void* const lp_link, char* buf, int len) { return true; };
+	virtual bool OnSend_no_copy(wb_filter_interface* plink, void* const lp_link, char* buf, int len) { _send_bytes += len; return true; };
 	virtual bool OnRecv(wb_filter_interface* p_fi, void* const lp_link, const char* buf, int len, LPOVERLAPPED pol);
 	//数据打包
 	virtual const ETH_PACK* make_pack_1st(const char* buffer, int len, int& pack_len);
@@ -135,6 +153,8 @@ public:
 	}
 
 	virtual bool is_timeout() {return time(0) - _last_op_time > TIME_OUT_UDP;}
+
+	virtual byte get_Protocol() const { return PRO_UDP; } ;
 };
 
 //原始icmp socket 全局只能创建一个
@@ -186,11 +206,15 @@ class wb_icmp_link : public wb_link_interface
 	sockaddr_in			_addr = {};
 
 	ICMP_LINK_KEY		_key = {};
-	//UINT				_uSrcIp;
 
 	std::atomic_int64_t	_last_op_time = 0;
 	std::atomic<int>	_ref = 0;
+	wb_link_info		_info;//无意义，接口实例化
+
 public:
+
+	virtual const wb_link_info& get_link_info()const { return _info; };
+	virtual wb_link_send_recv get_send_recv() const { return {0,0}; }
 	wb_icmp_link(const ETH_PACK* pg) {
 		auto pif = (ustrt_net_base_info*)&pg->ip_h.uiSourIp;
 		_key.ip64 = pif->big_info.ip;
@@ -198,7 +222,6 @@ public:
 		_pack = (ETH_PACK*)_write_buf;
 		_ip_h = &_pack->ip_h;
 		_p_icmp_data = (char*)_ip_h + c_ip_head_len;
-		//_uSrcIp = pg->ip_h.uiSourIp;
 		_addr.sin_family = AF_INET;
 		_addr.sin_addr.S_un.S_addr = pg->ip_h.uiDestIp;
 
@@ -239,7 +262,6 @@ public:
 	// 事件返回false，表示本连接不再需要,连接管理器将关闭连接并在适当的时候回收资源
 	virtual bool OnRead(wb_filter_interface* p_fi, void* const lp_link, const ETH_PACK* pg, int len) {
 		_last_op_time = time(0);
-		//_key.src_info.usSequence = pg->icmp_h.usSequence;//在此更新序号
 		ICMP_PACK_KEY pk = { _last_op_time.load() ,_key.detail.uiDstIp ,pg->icmp_h.usSequence  };
 		pk.detail.usID = _key.usID;
 		return p_fi->post_send_ex(this, lp_link,get_ip_pack_date(pg), get_icmp_pack_date_len(pg),&pk);
@@ -258,6 +280,10 @@ public:
 	virtual bool Send(LPWSABUF buffer, LPOVERLAPPED pol) {return true;}		
 
 	virtual bool is_timeout() {return time(0) -  _last_op_time> TIME_OUT_ICMP;}
+	virtual byte get_Protocol() const { return PRO_ICMP; };
+
+	virtual void set_data(void* pd) {};
+	virtual void* get_data() { return nullptr; };
 };
 
 //TCP协议连接
@@ -278,13 +304,11 @@ class wb_tcp_link :public wb_net_link
 	
 	using pack_map = std::map<UINT, wb_data_pack_ex*>;
 	pack_map			_p_cache ;
-	//wb_lock				_p_lock;
 	int					_psh_num = 0;
 	
 	std::string			_ip;
 
-	//wb_lock				_close_lock;
-	int					_close_status = 0; //1发送了FIN包，2等待FIN包 3等待ACK包
+	std::atomic<int>	_close_status = 0; //1发送了FIN包，2等待FIN包 3等待ACK包
 	time_t				_close_tm = 0;
 	
 	unsigned short		_next_win_max;
@@ -340,6 +364,7 @@ public:
 
 	virtual bool OnSend_no_copy(wb_filter_interface* plink, void* const lp_link, char* buf, int len) {
 		WLOG("tcp %p OnSend_no_copy buf=%p\n" , this, buf);
+		_send_bytes += len;
 		delete[]buf;
 		return true;
 	}
@@ -418,4 +443,6 @@ public:
 		}
 		return true;
 	};
+
+	virtual byte get_Protocol() const { return PRO_TCP; };
 };

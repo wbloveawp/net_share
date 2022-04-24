@@ -31,6 +31,7 @@ constexpr int c_ip_frag_offset_base = c_ip_data_len_max / 8 ;//ip分片偏移单位,分
 #define TCP_FLAG_PSH(x) (x&0x08)
 #define TCP_FLAG_ACK(x) (x&0x0F)
 //用于快速查找此网络包对应的连接对象的key结构
+
 #pragma	 pack (push,1)
 union ustrt_net_base_info {
 
@@ -90,10 +91,14 @@ union ustrt_net_base_info {
 	printf(__VA_ARGS__) ; \
 }
 
+/*
 #define NLOG(...) { \
 	system("cls") ;\
 	printf(__VA_ARGS__) ; \
 }
+*/
+
+#define NLOG(...) { printf(__VA_ARGS__) ; }
 
 
 //计算校验和
@@ -147,30 +152,61 @@ struct wb_data_pack_ex
 	char	data[DEFAULT_RECV_SIZE];//数据
 };
 
+
+struct wb_link_info {
+
+	ustrt_net_base_info ip_info;
+	unsigned char  mac[MAC_ADDR_LEN];//该机器码
+};
+
+
+struct wb_link_send_recv {
+	INT64		send_bytes;
+	INT64		recv_bytes;
+};
+
 __interface wb_link_interface;//连接对象
 __interface wb_filter_interface;//过滤器对象
 __interface wb_net_card_interface;//网卡对象
+
+__interface wb_link_event;//连接对象
 __interface wb_filter_event;//过滤器事件
+
 
 //连接接口
 __interface wb_link_interface
 {
 	virtual bool create_socket() = 0;
 	virtual void close() = 0;
-	/*
-	* OnRead,OnWrite,
-	* 事件返回false，表示本连接不再需要,连接管理器将关闭连接并在适当的时候回收资源
-	*/	
-	virtual bool OnWrite(wb_filter_interface* p_fi, const ETH_PACK* pg, int len) = 0;//从网卡写完网络包
 
+	virtual inline int AddRef() = 0;
+	virtual inline int DelRef() = 0;
+	virtual inline int Ref() = 0;
+
+	virtual bool Recv(LPWSABUF buffer, DWORD& dwFlags,sockaddr* addr,int* addr_len, LPOVERLAPPED pol) = 0;
+	virtual bool Send(LPWSABUF buffer, LPOVERLAPPED pol) = 0;
+
+	virtual const wb_link_info& get_link_info() const = 0;
+
+	virtual wb_link_send_recv get_send_recv() const  = 0;
+
+	virtual byte get_Protocol() const = 0 ;
+
+/*
+* OnRead,OnWrite,
+* 事件返回false，表示本连接不再需要,连接管理器将关闭连接并在适当的时候回收资源
+*/
+	virtual bool OnWrite(wb_filter_interface* p_fi, const ETH_PACK* pg, int len) = 0;//从网卡写完网络包
 	virtual bool OnRead(wb_filter_interface* p_fi, void* const lp_link, const ETH_PACK* pg, int len) = 0;//从网卡读取到网络包,len：包总长度
+
 	virtual bool OnRecv(wb_filter_interface* p_fi, void* const lp_link, const char* buf, int len, LPOVERLAPPED pol) = 0;//从网卡读取到网络包,len：包总长度
 	virtual bool OnSend(wb_filter_interface* p_fi, void* const lp_link, const char* buf, int len, LPOVERLAPPED pol) = 0;//从网卡写完网络包
 	virtual bool OnSend_no_copy(wb_filter_interface* p_fi, void* const lp_link, char* buf, int len) = 0;//数据不进行拷贝
 
-	virtual bool Recv(LPWSABUF buffer, DWORD& dwFlags,sockaddr* addr,int* addr_len, LPOVERLAPPED pol) = 0;
-	virtual bool Send(LPWSABUF buffer, LPOVERLAPPED pol) = 0;
+	virtual void set_data(void* pd)=0 ;
+	virtual void* get_data()=0;
 };
+
 //过滤器接口
 __interface wb_filter_interface
 {
@@ -185,17 +221,26 @@ __interface wb_filter_interface
 	virtual wb_data_pack_ex* get_data_pack_ex() = 0;//获取一个数据包结构
 	virtual void back_data_pack_ex(wb_data_pack_ex*) = 0;//归还数据包结构
 
-	virtual void post_write(wb_link_interface* plink, const ETH_PACK* pk, int len) = 0;
+	virtual void post_write(wb_link_interface* plink, const ETH_PACK* pk, int len, int data_len = 0) = 0;
 };
+
 //过滤器接收事件
 __interface wb_filter_event
 {
 	virtual void OnRead(const ETH_PACK* pg, int len) = 0;//从网卡读取到网络包,len：包总长度
 	virtual void OnWrite(wb_link_interface* plink, const ETH_PACK* pg, int len) = 0;//从网卡写完网络包
 };
+
 //网卡接口
 __interface wb_net_card_interface
 {
 	//方法接口
-	virtual void post_write(wb_filter_event* p_nce, wb_link_interface* plink, const ETH_PACK* pk, int len) = 0;
+	virtual void post_write(wb_filter_event* p_nce, wb_link_interface* plink, const ETH_PACK* pk, int pack_len,int data_len=0) = 0;
+};
+
+
+__interface wb_link_event
+{
+	virtual bool OnNewLink(wb_link_interface* lk)=0;
+	virtual void OnCloseLink(wb_link_interface* lk) = 0;
 };

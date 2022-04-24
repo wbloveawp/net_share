@@ -7,11 +7,17 @@
 class wb_net_filter :public wb_filter_interface, public wb_filter_event
 {
 protected:
-	wb_net_card_interface* _p_nci = nullptr;
+	using auto_link_ptr		= wb_share_ptr<wb_net_link>;
+	wb_net_card_interface*	_p_nci = nullptr;
 	wb_io					_io;
 	wb_base_memory_pool		_mdp;
+
+	std::atomic<INT64>		_recv_bytes=0;
+	std::atomic<INT64>		_send_bytes=0;
+
+	wb_link_event*			_event;
 public:
-	wb_net_filter(wb_net_card_interface* pnci) :_p_nci(pnci) {};
+	wb_net_filter(wb_net_card_interface* pnci, wb_link_event* ev=nullptr) :_p_nci(pnci), _event(ev){};
 	virtual ~wb_net_filter() {};
 
 	virtual bool start(int thds) {
@@ -24,7 +30,7 @@ public:
 	virtual wb_data_pack* get_data_pack() { return (wb_data_pack*)_mdp.get_mem(); };
 	void back_data_pack(wb_data_pack* p) { _mdp.recover_mem(p); };
 
-	virtual void post_write(wb_link_interface* plink, const ETH_PACK* pk, int len) { _p_nci->post_write(this, plink, pk, len); };
+	virtual void post_write(wb_link_interface* plink, const ETH_PACK* pk, int len,int data_len=0) { _p_nci->post_write(this, plink, pk, len, data_len); };
 	//virtual void post_write(wb_link_interface* plink, const ETH_PACK* pk, const int& len) { _p_nci->post_write(this, plink, pk, len); };//
 	virtual bool post_send_no_copy(wb_link_interface* plink, void* const lp_link, char* buf, int len) { return true; }
 	virtual bool post_send_ex(wb_link_interface* plink, void* const lp_link, const char* buf, int len, void* pd) { return true; }
@@ -34,6 +40,16 @@ public:
 
 	virtual wb_data_pack_ex* get_data_pack_ex() { return nullptr; };//获取一个数据包结构
 	virtual void back_data_pack_ex(wb_data_pack_ex*) {};//归还数据包结构
+
+	void OnNewLink(wb_link_interface* lk) {
+		if (_event)
+			_event->OnNewLink(lk);
+	};
+
+	void OnCloseLink(wb_link_interface* lk) {
+		if (_event)
+			_event->OnCloseLink(lk);
+	};
 };
 
 enum class udp_io_oper_type {
@@ -47,7 +63,7 @@ enum class udp_io_oper_type {
 class wb_udp_filter :public wb_net_filter
 {
 protected:
-	using auto_udp_link = wb_share_ptr<wb_udp_link>;
+	using auto_udp_link = auto_link_ptr;// wb_share_ptr<wb_udp_link>;
 	//读写网卡使用
 	struct WB_OVERLAPPED_UDP
 	{
@@ -70,45 +86,55 @@ protected:
 	struct frame_info
 	{
 		ustrt_net_base_info	nbi;
-		wb_lock  lk;
-		frame_list	fl;
+		wb_lock				lk;
+		frame_list			fl;
 	};
 	using frame_data = std::map<FRAME_KEY, frame_info*>;
 
 	using link_map = std::map<ustrt_net_base_info, auto_udp_link>;
 
-	wb_base_memory_pool	_mlp;//连接池
-	wb_base_memory_pool	_mop;//重叠池
-	link_map			_links;
-	wb_lock				_lock;
+	wb_base_memory_pool		_mlp;//连接池
+	wb_base_memory_pool		_mop;//重叠池
+	link_map				_links;
+	wb_lock					_lock;
 
-	std::thread			_check_t;
-	std::atomic_bool	_active = false;
+	std::thread				_check_t;
+	std::atomic_bool		_active = false;
 	//分片缓存数据
-	frame_data			_fd;
-	wb_lock				_f_lock;
+	frame_data				_fd;
+	wb_lock					_f_lock;
 public:
-	wb_udp_filter(wb_net_card_interface* pnci) :wb_net_filter(pnci) {}
+	wb_udp_filter(wb_net_card_interface* pnci, wb_link_event* ev = nullptr) :wb_net_filter(pnci,ev) {}
 
 	virtual bool start(int thds);
 	virtual void stop();
 	auto_udp_link get_link(const ustrt_net_base_info* pif, const ETH_PACK* pg);
-	void close_link(wb_udp_link* plink) {
+	void close_link(wb_net_link* plink) {
 		auto nbi = (const ustrt_net_base_info&)(*plink);
 		plink->close();
 		_lock.lock();
-		_links.erase(nbi);
+		auto it = _links.erase(nbi);
 		_lock.unlock();
 	}
 
 	//udp网卡包读取事件
 	virtual void DoOnRecv(const char* buffer, int len, WB_OVERLAPPED_UDP* pol) {
 		//WLOG("UDP recv数据:%d  %s\n",len,buffer);
+		int kl = 0;
 		do
 		{
 			if (len <= 0)break;
-			if (!pol->p_lk->OnRecv(this, &pol->p_lk, buffer, len, &pol->ol))break;
-			if (!post_recv(pol->p_lk, &pol->p_lk, &pol->ol)) break;
+			if (!pol->p_lk->OnRecv(this, &pol->p_lk, buffer, len, &pol->ol)) {
+				kl = 1;
+				break;
+			}
+
+			if (!post_recv(pol->p_lk, &pol->p_lk, &pol->ol))
+			{
+				kl = 2;
+				break;
+			}
+
 			return;
 		} while (0);
 		close_link(pol->p_lk);
@@ -116,6 +142,7 @@ public:
 	}
 
 	virtual void DoOnSend(const char* buffer, int len, WB_OVERLAPPED_UDP* pol) {
+		
 		if (len > 0)
 		{
 			if (pol->wbuf.len > len)
@@ -138,7 +165,7 @@ public:
 		}
 		WB_OVERLAPPED_UDP::operator delete(pol, _mop); //_mop.recover_mem(pol);
 	}
-	virtual void DoOnSend_No_Copy(char* buffer, int len, LPOVERLAPPED pol) {
+	virtual void DoOnSend_No_Copy(char* buffer, int len, WB_OVERLAPPED_UDP* pol) {
 		WLOG("delete buffer:%p  %d\n", buffer, len);
 		delete[]buffer;
 		WB_OVERLAPPED_UDP::operator delete(pol, _mop);  //_mop.recover_mem(pol);
@@ -184,7 +211,7 @@ class wb_icmp_filter : public wb_net_filter
 	wb_lock					_ic_lock;
 public:
 
-	wb_icmp_filter(wb_net_card_interface* pnci) :wb_net_filter(pnci) {}
+	wb_icmp_filter(wb_net_card_interface* pnci, wb_link_event* ev = nullptr) :wb_net_filter(pnci,ev) {}
 
 	virtual bool start(int thds);
 	virtual void stop();
@@ -192,12 +219,6 @@ public:
 	//IO事件
 	virtual void DoOnRecv(const char* buffer, int len, WB_OVERLAPPED_ICMP* pol);
 	virtual void DoOnSend(const char* buffer, int len, WB_OVERLAPPED_ICMP* pol) {
-		/*
-		auto plink = pol->p_lk.get();
-		_ic_lock.lock();
-		_d_links[(ICMP_PACK_KEY)*plink] = pol->p_lk;
-		_ic_lock.unlock();
-		*/
 		pol->p_lk->OnSend(this, &pol->p_lk,buffer, len, &pol->ol);
 		WB_OVERLAPPED_ICMP::operator delete(pol, _mop);// _mop.recover_mem(pol);
 	}
@@ -213,7 +234,7 @@ public:
 class wb_tcp_filter :public wb_net_filter
 {
 	//friend wb_tcp_link;
-	using auto_tcp_link = wb_share_ptr<wb_tcp_link>;
+	using auto_tcp_link = auto_link_ptr;// wb_share_ptr<wb_tcp_link>;
 	enum class tcp_operator {
 		e_send,
 		e_recv,
@@ -253,11 +274,16 @@ class wb_tcp_filter :public wb_net_filter
 	link_map			_links;//正常的连接
 
 	std::atomic_bool	_active = false;
+
+	std::thread			_check_thread;
 public:
-	wb_tcp_filter(wb_net_card_interface* pnci) :wb_net_filter(pnci) {}
+	wb_tcp_filter(wb_net_card_interface* pnci, wb_link_event* ev = nullptr) :wb_net_filter(pnci,ev) {}
 
 	virtual bool start(int thds);
-	virtual void stop() {_active = false;}
+	virtual void stop() {
+		_active = false;
+		_check_thread.join();
+	}
 
 	void close_link(auto_tcp_link& cl,char cFlag);
 	void DoOnConnect(wb_tcp_link* plink, LPOVERLAPPED pol);

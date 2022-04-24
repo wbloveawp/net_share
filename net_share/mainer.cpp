@@ -1,35 +1,36 @@
 
-#include "main.h"
+#include "mainer.h"
 #include <IPHlpApi.h>
 #include <atlconv.h>
 #pragma comment(lib,"Iphlpapi.lib") 
 
 
-mainer::mainer() {
-	_udp = new wb_udp_filter(this);
-	_tcp = new wb_tcp_filter(this);
-	_icmp = new wb_icmp_filter(this);
+mainer::mainer(wb_link_event* ev){
+	_udp = new wb_udp_filter(this,ev);
+	_tcp = new wb_tcp_filter(this,ev);
+	_icmp = new wb_icmp_filter(this,ev);
 	if (!_udp || !_tcp || !_icmp)
 		throw "mainer 初始化失败";
 	//github 测试
 }
+
 mainer::~mainer() {
+	stop();
 	delete _udp;
 	delete _tcp;
 	delete _icmp;
 }
 
-void mainer::start() {
-	//stop();
+bool mainer::start() {
 	SYSTEM_INFO si = {};
 	GetSystemInfo(&si);
-	auto ithreads = si.dwNumberOfProcessors * 2 + 2;//默认启动线程数，release下使用默认cpu*2+2
+	auto ithreads =  si.dwNumberOfProcessors * 2 + 2;//默认启动线程数，release下使用默认cpu*2+2
 	WLOG("ithreads=%d\n", ithreads);
 	//ithreads = 1;
 	//网卡数据读取
 	auto net_card_work = [=](DWORD numberOfBytes, ULONG_PTR ComKey, LPOVERLAPPED pol)->bool {
 		WB_OVERLAPPED* pl = (WB_OVERLAPPED*)pol;
-		if (numberOfBytes <= 0 )
+		if (numberOfBytes <= 0 || nullptr == pol)
 		{
 			if (pl) {
 				WLOG("回收pol:%p\n", pol);
@@ -66,56 +67,56 @@ void mainer::start() {
 		nif.uiNetMasks = inet_addr(szMask);//使用该ip所在的网络接口的掩码
 		nif.uiNetSeccion = inet_addr(my_ip.c_str())& nif.uiNetMasks;//使用该ip所在的网络接口的网络号
 
-		NLOG("进度:1%%...");
+		RLOG("进度:1%%...");
 		if (!(_ok = _ncf.openDriver(NDIS_DRIVER_NAME))) {//打开驱动程序
 			RLOG("_ncf.openDriver 失败:%d\n", GetLastError());
 			break;
 		}
 
-		NLOG("进度:10%%...");
+		RLOG("进度:10%%...");
 		if (!(_ok = _ncf.setFilter(&nif, sizeof(nif))))//设置过滤条件，即和本主机在一个子网的主机，才给与网络转发
 		{
 			RLOG("_ncf.setFilter 失败:%d\n", GetLastError());
 			break;
 		}
-		NLOG("进度:20%%...");
+		RLOG("进度:20%%...");
 		USES_CONVERSION;
 		if (!(_ok = _ncf.openCard(A2W(buf), NDIS_DRIVER_NAME)))//打开网卡对象(文件)
 		{
 			RLOG(" _ncf.openCard 失败:%d [%s %d]\n", GetLastError(), __FILE__, __LINE__);
 			break;
 		}
-		NLOG("进度:40%%...");
+		RLOG("进度:40%%...");
 		if (!(_ok = _nc_io.relate((HANDLE)_ncf, this)))//网卡对象(文件)与io完成端口关联
 		{
 			RLOG(" _nc_io.relate 失败:%d [%s %d]\n", GetLastError(), __FILE__, __LINE__);
 			break;
 		}
-		NLOG("进度:50%%...");
+		RLOG("进度:50%%...");
 		if (!_udp->start(ithreads))
 		{
 			RLOG(" _udp->start 失败:%d [%s %d]\n", GetLastError(), __FILE__, __LINE__);
 			break;
 		}
-		NLOG("进度:60%%...");
+		RLOG("进度:60%%...");
 		if (!_tcp->start(ithreads))
 		{
 			RLOG(" _tcp->start 失败:%d [%s %d]\n", GetLastError(), __FILE__, __LINE__);
 			break;
 		}
-		NLOG("进度:70%%...");
+		RLOG("进度:70%%...");
 		if (!_icmp->start(ithreads))
 		{
 			RLOG(" _tcp->start 失败:%d [%s %d]\n", GetLastError(), __FILE__, __LINE__);
 			break;
 		}
-		NLOG("进度:80%%...");
+		RLOG("进度:80%%...");
 		if (!_mp.start(sizeof(WB_OVERLAPPED), 8024))
 		{
 			RLOG("_mp.start 失败:%d [%s %d]\n", GetLastError(), __FILE__, __LINE__);
 			break;
 		}
-		NLOG("进度:90%%...");
+		RLOG("进度:90%%...");
 		while (_default_reads < ithreads+2)
 		{
 			WB_OVERLAPPED* p = new (_mp.get_mem()) WB_OVERLAPPED;
@@ -126,7 +127,7 @@ void mainer::start() {
 				break;
 			_default_reads++;
 		}
-		NLOG("进度:100%%...\n");
+		RLOG("进度:100%%...\n");
 		RLOG("本机IP=%s  Mask=%s  uMask=%x uIP=%x\n", my_ip.c_str(), szMask, nif.uiNetMasks, nif.uiNetSeccion);
 		
 	} while (0);
@@ -139,6 +140,7 @@ void mainer::start() {
 	{
 		RLOG("启动成功!\n");
 	}	
+	return _ok;
 }
 
 void mainer::stop() {
@@ -154,8 +156,7 @@ void mainer::stop() {
 	_mp.stop();
 }
 
-
-void mainer::post_write(wb_filter_event* p_nce, wb_link_interface* plink, const ETH_PACK* pk, int len)
+void mainer::post_write(wb_filter_event* p_nce, wb_link_interface* plink, const ETH_PACK* pk, int len, int data_len)
 {
 	WB_OVERLAPPED* pl = new(_mp.get_mem()) WB_OVERLAPPED();
 	if (pl) {
@@ -184,6 +185,8 @@ void mainer::post_write(wb_filter_event* p_nce, wb_link_interface* plink, const 
 
 void mainer::DoOnWrite(DWORD numberOfBytes, WB_OVERLAPPED* pol) {
 	--writes;
+	_write_packs++;
+	_write_bytes += numberOfBytes;
 	if (pol->p_nce)
 		pol->p_nce->OnWrite(pol->p_lk, (ETH_PACK*)pol->buf, numberOfBytes);
 	_mp.recover_mem(pol);
@@ -201,9 +204,12 @@ void mainer::DoOnWrite(DWORD numberOfBytes, WB_OVERLAPPED* pol) {
 
 //io事件
 void mainer::DoOnRead(DWORD numberOfBytes, WB_OVERLAPPED* pl) {
+	//numberOfBytes>0 && pl!=null 调用者已保证 
+	//底层驱动已过滤掉其他协议的网络包,
 	//1.根据包类型分派给对应的过滤器->OnRead()
-	//RLOG("读取事件...\n");
 	ETH_PACK* pk = (ETH_PACK*)pl->buf;
+	_read_packs++;
+	_read_bytes += numberOfBytes;
 	switch (pk->ip_h.cTypeOfProtocol) {
 	case PRO_TCP: _tcp->OnRead(pk, numberOfBytes); break;
 	case PRO_UDP: _udp->OnRead(pk, numberOfBytes); break;

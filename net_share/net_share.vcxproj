@@ -141,7 +141,7 @@
   <ItemGroup>
     <ClCompile Include="base_component.cpp" />
     <ClCompile Include="evn_init.cpp" />
-    <ClCompile Include="main.cpp" />
+    <ClCompile Include="mainer.cpp" />
     <ClCompile Include="net_card.cpp" />
     <ClCompile Include="net_filter.cpp" />
     <ClCompile Include="net_link.cpp" />
@@ -152,11 +152,12 @@
     <ClInclude Include="base_component.h" />
     <ClInclude Include="base_def.h" />
     <ClInclude Include="evn_init.h" />
-    <ClInclude Include="main.h" />
+    <ClInclude Include="mainer.h" />
     <ClInclude Include="net_api.hpp" />
     <ClInclude Include="net_base.h" />
     <ClInclude Include="net_card.h" />
     <ClInclude Include="net_filter.h" />
+    <ClInclude Include="net_framework.h" />
     <ClInclude Include="net_link.h" />
     <ClInclude Include="net_pack.h" />
     <ClInclude Include="resource.h" />

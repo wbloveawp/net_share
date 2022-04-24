@@ -1,0 +1,5 @@
+<RCC>
+    <qresource prefix="/QtApplication">
+        <file>C:/Users/wb/Desktop/btn.png</file>
+    </qresource>
+</RCC>

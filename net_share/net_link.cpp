@@ -2,8 +2,9 @@
 #include "net_link.h"
 #include <algorithm>
 
-wb_net_link::wb_net_link(const ETH_PACK* pg) {
+wb_net_link::wb_net_link(const ETH_PACK* pg){
 	_nbi = *((ustrt_net_base_info*)&pg->ip_h.uiSourIp);
+	memcpy(_info.mac, pg->SrcAddr, MAC_ADDR_LEN);
 	//assert(_nbi.ip_info.dst_port==0xa283);
 	//WLOG("udp:%p         [%x  %x] \n", this, _nbi.ip_info.dst_port, _nbi.ip_info.src_port);
 	_pack = (ETH_PACK*)_write_buf;
@@ -66,6 +67,7 @@ bool  wb_udp_link::OnRead(wb_filter_interface* p_fi, void* const lp_link, const 
 bool wb_udp_link::OnRecv(wb_filter_interface* p_fi, void* const lp_link, const char* buf, int len, LPOVERLAPPED pol)
 {
 	//打包写数据大包多次写 写完成后 再recv
+	_recv_bytes += len;
 	_last_op_time = time(0);
 	if (len <= c_udp_data_len_max)
 	{
@@ -584,6 +586,7 @@ bool wb_tcp_link::OnRead(wb_filter_interface* p_fi, void* const lp_link, const E
 
 bool wb_tcp_link::OnRecv(wb_filter_interface* p_fi, void* const lp_link, const char* buf, int len, LPOVERLAPPED pol)
 {
+	_recv_bytes += len;
 	AUTO_LOCK(_pack_lock);
 	_last_op_time = time(0);
 	int dlt = 0, w_len = 0;

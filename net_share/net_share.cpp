@@ -3,7 +3,7 @@
 
 #include <iostream>
 #include "evn_init.h"
-#include "main.h"
+#include "mainer.h"
 
 #include <algorithm>
 using namespace std;
@@ -159,9 +159,9 @@ public:
 
 using share_ptr = my_share_ptr<MyClass>;
 using my_que = std::map<int, share_ptr>;
+
 int main()
 {
-
 	if(0)
 	{	//只能指针测试
 		wb_base_memory_pool _mp;
@@ -191,9 +191,9 @@ int main()
 		//特殊网络包测试	
 	}
     mainer m;
-    m.start();
+	m.start();
     cin.get();
-    m.stop();
+    //m.stop();
 
-    system("pause");
+    //system("pause");
 }

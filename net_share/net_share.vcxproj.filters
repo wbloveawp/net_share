@@ -25,6 +25,12 @@
     <Filter Include="io">
       <UniqueIdentifier>{17205df5-5307-4ca1-acab-02ecdfa3b3a5}</UniqueIdentifier>
     </Filter>
+    <Filter Include="qt界面">
+      <UniqueIdentifier>{290566c2-3a0e-4173-9656-fd82df99e9c2}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="接口设计">
+      <UniqueIdentifier>{14f468e7-aea6-4fbd-8ef0-bb124bd6533b}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="net_share.cpp">
@@ -48,8 +54,8 @@
     <ClCompile Include="base_component.cpp">
       <Filter>基本组件</Filter>
     </ClCompile>
-    <ClCompile Include="main.cpp">
-      <Filter>源文件</Filter>
+    <ClCompile Include="mainer.cpp">
+      <Filter>头文件</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -74,7 +80,7 @@
     <ClInclude Include="net_filter.h">
       <Filter>网络封包对象</Filter>
     </ClInclude>
-    <ClInclude Include="main.h">
+    <ClInclude Include="mainer.h">
       <Filter>头文件</Filter>
     </ClInclude>
     <ClInclude Include="wb_io.hpp">
@@ -88,6 +94,9 @@
     </ClInclude>
     <ClInclude Include="resource.h">
       <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="net_framework.h">
+      <Filter>接口设计</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

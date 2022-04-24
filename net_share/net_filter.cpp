@@ -11,7 +11,7 @@ bool wb_udp_filter::start(int thds) {
 			{
 			case udp_io_oper_type::e_send:this->DoOnSend(pl->buf, numberOfBytes, pl);break;
 			case udp_io_oper_type::e_recv:this->DoOnRecv(pl->buf, numberOfBytes, pl); break;
-			case udp_io_oper_type::e_send_no_copy:this->DoOnSend_No_Copy(pl->wbuf.buf, numberOfBytes, pol); break;
+			case udp_io_oper_type::e_send_no_copy:this->DoOnSend_No_Copy(pl->wbuf.buf, numberOfBytes, pl); break;
 			}
 		}
 		return true;
@@ -130,6 +130,7 @@ wb_udp_filter::auto_udp_link wb_udp_filter::get_link(const ustrt_net_base_info* 
 				bt = true;
 			} while (0);
 			if (bt) {
+				//新UDP连接
 				_links[*pif] = plink;
 			}
 			else
@@ -340,6 +341,7 @@ struct icmp_info
 
 bool wb_icmp_filter::start(int thds)
 {
+	stop();
 	thds = 5;
 	_r_sock = WSASocket(AF_INET, SOCK_RAW, IPPROTO_ICMP, nullptr, 0, WSA_FLAG_OVERLAPPED);
 	assert(_r_sock != INVALID_SOCKET);
@@ -356,7 +358,7 @@ bool wb_icmp_filter::start(int thds)
 		}
 		return true;
 	};
-	stop();
+
 	auto ret = false;
 	do
 	{	
@@ -413,6 +415,8 @@ bool wb_icmp_filter::start(int thds)
 
 void wb_icmp_filter::stop()
 {
+	closesocket(_r_sock);
+	_r_sock = INVALID_SOCKET;
 	std::this_thread::sleep_for(std::chrono::milliseconds(1000));
 	_io.stop();
 	_mop.stop();
@@ -511,29 +515,6 @@ bool wb_icmp_filter::post_send_ex(wb_link_interface* plink, void* const lp_link,
 	}
 	return true;
 }
-/*
-bool wb_icmp_filter::post_send(wb_link_interface* plink, void* const lp_link, const char* buf, int len)
-{
-	//WB_OVERLAPPED_ICMP* pu = (WB_OVERLAPPED_ICMP*)_mop.get_mem();
-	WB_OVERLAPPED_ICMP* pu = new (_mop) WB_OVERLAPPED_ICMP;
-	if (pu)
-	{
-		pu->wbuf.buf = pu->buf;
-		pu->wbuf.len = len;
-		memcpy(pu->buf, buf, len);
-		pu->ot = udp_io_oper_type::e_send;
-		pu->p_lk =*((auto_icmp_link*)lp_link);
-		if (SOCKET_ERROR == WSASendTo(_r_sock, &pu->wbuf, 1, nullptr, 0, pu->p_lk->get_addr(), sizeof(sockaddr_in), &pu->ol, nullptr)
-			&& GetLastError() != ERROR_IO_PENDING)
-		{
-			WB_OVERLAPPED_ICMP::operator delete(pu, _mop);
-			return false;
-		}
-		return true;
-	}
-	return true;
-}
-*/
 
 //tcp========================================================================================
 bool wb_tcp_filter::start(int thds)
@@ -563,7 +544,7 @@ bool wb_tcp_filter::start(int thds)
 		_active = true;
 	} while (0);
 	//return _active;
-	std::thread t = std::thread([=]() {
+	_check_thread = std::thread([=]() {
 		while (this->_active)
 		{
 			std::this_thread::sleep_for(std::chrono::seconds(5));
@@ -580,19 +561,21 @@ bool wb_tcp_filter::start(int thds)
 			}
 		}
 	});
-	t.detach();
-
+	//t.detach();
 	return _active;
 }
 
 void wb_tcp_filter::close_link(auto_tcp_link& cl,char cFlag)
 {
 	auto nbi = (const ustrt_net_base_info&)*cl.get();
+		
 	_lock.lock();
-	_links.erase(nbi);
+	auto it = _links.erase(nbi);
 	_lock.unlock();
+	if(it>0)
+		OnCloseLink(cl);
 	//执行断开
-	cl->DoClose(this, cFlag);
+	((wb_tcp_link*)cl.get())->DoClose(this, cFlag);
 }
 
 void wb_tcp_filter::DoOnConnect(wb_tcp_link* cl, LPOVERLAPPED pol)
@@ -621,11 +604,12 @@ void wb_tcp_filter::DoOnConnect(wb_tcp_link* cl, LPOVERLAPPED pol)
 		}
 		else
 		{
+			OnNewLink(tcp_link);
 			_lock.lock();
 			assert(_links.find(nbi) == _links.end());
 			_links[nbi] = tcp_link;
 			_lock.unlock();
-			tcp_link->OnConnected(this);
+			cl->OnConnected(this);
 		}
 	}
 	else
@@ -670,13 +654,12 @@ void wb_tcp_filter::OnRead(const ETH_PACK* pg, int len)
 		}
 		if (TCP_FLAG_RST(t_flag) || TCP_FLAG_FIN(t_flag))//关闭连接
 		{
-			//WLOG("tcp close link %p %s  %d\n", plink.get(),__FILE__,__LINE__);
 			close_link(plink, t_flag);
 		}
 		else
 		{
 #ifdef _DEBUG
-			if (plink->get_close_status() == 0) {
+			if (((wb_tcp_link*)plink.get())->get_close_status() == 0) {
 				assert(plink->Ref() >= 3);
 			}
 #endif 

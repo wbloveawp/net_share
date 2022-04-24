@@ -24,6 +24,15 @@ struct WB_OVERLAPPED
 * 管理、组装各类组件
 */
 
+struct wb_net_info
+{
+	INT64 read_packs;
+	INT64 write_packs;
+
+	INT64 read_bytes;
+	INT64 write_bytes;
+};
+
 class mainer :public wb_net_card_interface {
 	std::atomic_int		_default_reads = 0;
 	wb_base_memory_pool _mp;//网卡overloap mem
@@ -38,16 +47,25 @@ class mainer :public wb_net_card_interface {
 	using pack_list = std::list<WB_OVERLAPPED*> ;
 	pack_list _write_list;
 	wb_lock   _lock;
-	
+	//统计数据
+	std::atomic<INT64> _read_packs =0;
+	std::atomic<INT64> _write_packs=0;
+
+	std::atomic<INT64> _read_bytes=0;
+	std::atomic<INT64> _write_bytes=0;
 public:
-	mainer();
+	mainer(wb_link_event* ev=nullptr);
 	virtual ~mainer();
-	void start();
+	bool start();
 	void stop();
 	bool get_net_card_name(const char* ip, char* buffer, int buf_len,char* mask, int mask_len);
-	virtual void post_write(wb_filter_event* p_nce, wb_link_interface* plink, const ETH_PACK* pk, int len);
+	virtual void post_write(wb_filter_event* p_nce, wb_link_interface* plink, const ETH_PACK* pk, int pack_len, int data_len = 0);
 	//io事件
 	void DoOnWrite(DWORD numberOfBytes, WB_OVERLAPPED* pol);
 	void DoOnRead(DWORD numberOfBytes, WB_OVERLAPPED* pol);//处理读取到的网卡包
 
+	wb_net_info get_net_info()const {
+
+		return { _read_packs,_write_packs,_read_bytes,_write_bytes };
+	}
 };
