@@ -121,23 +121,16 @@ public:
 	//udp网卡包读取事件
 	virtual void DoOnRecv(const char* buffer, int len, WB_OVERLAPPED_UDP* pol) {
 		//WLOG("UDP recv数据:%d  %s\n",len,buffer);
-		int kl = 0;
-		wb_net_link* plk = nullptr;
 		do
 		{
 			if (len <= 0)break;
-			plk = pol->p_lk.get();
 			if (!pol->p_lk->OnRecv(this, &pol->p_lk, buffer, len, &pol->ol)) {
-				kl = 1;
 				break;
 			}
 			if (!post_recv(pol->p_lk, &pol->p_lk, &pol->ol))
 			{
-				WLOG("%p   \n", plk);
-				kl = 2;
 				break;
 			}
-
 			return;
 		} while (0);
 		close_link(pol->p_lk);
