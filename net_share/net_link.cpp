@@ -67,8 +67,7 @@ bool  wb_udp_link::OnRead(wb_filter_interface* p_fi, void* const lp_link, const 
 
 bool wb_udp_link::OnRecv(wb_filter_interface* p_fi, void* const lp_link, const char* buf, int len, LPOVERLAPPED pol)
 {
-	//打包写数据大包多次写 写完成后 再recv
-	_recv_bytes += len;
+	//大包写数据,大包多次写 写完成后 再recv
 	_last_op_time = time(0);
 	if (len <= c_udp_data_len_max)
 	{
@@ -537,6 +536,7 @@ bool wb_tcp_link::OnRead(wb_filter_interface* p_fi, void* const lp_link, const E
 {
 	if (_close_status != 0)return true;
 	auto c_ack = ntohl(pg->tcp_h.uiAcknowledgeNum);	//c端确认序号
+	__super::OnRead(p_fi, lp_link, pg, len);
 	AUTO_LOCK(_pack_lock);
 	if (c_ack > _last_ack)
 	{
@@ -587,7 +587,7 @@ bool wb_tcp_link::OnRead(wb_filter_interface* p_fi, void* const lp_link, const E
 
 bool wb_tcp_link::OnRecv(wb_filter_interface* p_fi, void* const lp_link, const char* buf, int len, LPOVERLAPPED pol)
 {
-	_recv_bytes += len;
+	__super::OnRecv(p_fi,lp_link, buf, len, pol);
 	AUTO_LOCK(_pack_lock);
 	_last_op_time = time(0);
 	int dlt = 0, w_len = 0;

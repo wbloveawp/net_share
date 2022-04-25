@@ -5,13 +5,12 @@
 #pragma comment(lib,"Iphlpapi.lib") 
 
 
-mainer::mainer(wb_link_event* ev){
-	_udp = new wb_udp_filter(this,ev);
-	_tcp = new wb_tcp_filter(this,ev);
-	_icmp = new wb_icmp_filter(this,ev);
+mainer::mainer(wb_machine_interface* mi){
+	_udp = new wb_udp_filter(this);
+	_tcp = new wb_tcp_filter(this,mi);
+	_icmp = new wb_icmp_filter(this);
 	if (!_udp || !_tcp || !_icmp)
 		throw "mainer 初始化失败";
-	//github 测试
 }
 
 mainer::~mainer() {
@@ -50,22 +49,24 @@ bool mainer::start() {
 	bool _ok = true;
 	do
 	{	//获取当前ip
-		auto i_ip = get_local_ip();//获取本主机的ip
+		auto i_ip = get_local_ip();
 		in_addr ia = {};
 		ia.S_un.S_addr = ntohl(i_ip);
-		std::string my_ip = inet_ntoa(ia);
+		_szIP = inet_ntoa(ia);
 		char buf[1024] = {};
 		char szMask[24] = {};
 		NET_IP_FILTER nif = {};
 		//nif.uiNetMasks = inet_addr("255.255.0.0");//默认掩码
 		//nif.uiNetSeccion = inet_addr("192.168.0.0");//默认网络号
-		if (!(_ok = get_net_card_name(my_ip.c_str(), buf, sizeof(buf), szMask,sizeof(szMask))))
+		if (!(_ok = get_net_card_name(_szIP.c_str(), buf, sizeof(buf), szMask,sizeof(szMask))))
 		{
 			RLOG("get_net_card_name 失败:%d [%s %d]\n", GetLastError(),__FILE__,__LINE__);
 			break;
 		}
+		_szCardName = buf;
+		::sprintf_s(buf, sizeof(buf) - 1, "\\DEVICE\\%s", _szCardName.c_str());
 		nif.uiNetMasks = inet_addr(szMask);//使用该ip所在的网络接口的掩码
-		nif.uiNetSeccion = inet_addr(my_ip.c_str())& nif.uiNetMasks;//使用该ip所在的网络接口的网络号
+		nif.uiNetSeccion = inet_addr(_szIP.c_str())& nif.uiNetMasks;//使用该ip所在的网络接口的网络号
 
 		RLOG("进度:1%%...");
 		if (!(_ok = _ncf.openDriver(NDIS_DRIVER_NAME))) {//打开驱动程序
@@ -128,7 +129,7 @@ bool mainer::start() {
 			_default_reads++;
 		}
 		RLOG("进度:100%%...\n");
-		RLOG("本机IP=%s  Mask=%s  uMask=%x uIP=%x\n", my_ip.c_str(), szMask, nif.uiNetMasks, nif.uiNetSeccion);
+		RLOG("本机IP=%s  Mask=%s  uMask=%x uIP=%x\n",_szIP.c_str(), szMask, nif.uiNetMasks, nif.uiNetSeccion);
 		
 	} while (0);
 	if (!_ok)
@@ -257,7 +258,8 @@ bool mainer::get_net_card_name(const char* ip, char* buffer, int buf_len, char* 
 				return false;
 			}
 
-			::sprintf_s(buffer, buf_len - 1, "\\DEVICE\\%s", pIpAdapterInfo->AdapterName);
+			//::sprintf_s(buffer, buf_len - 1, "\\DEVICE\\%s", pIpAdapterInfo->AdapterName);
+			::sprintf_s(buffer, buf_len - 1,"%s", pIpAdapterInfo->AdapterName);
 			memcpy(mask,pIpAdapterInfo->IpAddressList.IpMask.String,sizeof(pIpAdapterInfo->IpAddressList.IpMask.String));
 			//memcpy(buffer, pIpAdapterInfo->AdapterName, strlen(pIpAdapterInfo->AdapterName));
 			break;

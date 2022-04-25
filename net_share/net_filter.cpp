@@ -156,6 +156,7 @@ void wb_udp_filter::OnRead(const ETH_PACK* pk, int len)
 #endif 
 	//由于分片的后续包，没有udp头不具备端口信息，所以无法确认包是属于哪个连接的
 	//是否是分片包
+	_read_packs++;
 	auto fs = ntohs(pk->ip_h.sFragFlags);
 	char MF = (fs >> 13) & 0x01;
 	auto FO = (fs & 0x1FFF) / (1480 / 8);//分片的索引值
@@ -566,7 +567,7 @@ bool wb_tcp_filter::start(int thds)
 					i.second->close();
 				}
 			}
-			std::this_thread::sleep_for(std::chrono::seconds(10));
+			std::this_thread::sleep_for(std::chrono::seconds(3));
 		}
 	});
 	//t.detach();
@@ -596,9 +597,14 @@ void wb_tcp_filter::DoOnConnect(wb_tcp_link* cl, LPOVERLAPPED pol)
 	{
 		auto_tcp_link tcp_link(cl, &_mlp);
 		bool b_ok = false;
+		OnNewLink(tcp_link);
 		do
 		{
-			if (!_io.relate((HANDLE)((SOCKET)*cl), nullptr))break;
+			if (!_io.relate((HANDLE)((SOCKET)*cl), nullptr))
+			{
+				assert(0);
+				break;
+			}
 			if (!post_recv(cl, &tcp_link, nullptr))
 			{
 				assert(0);
@@ -608,12 +614,12 @@ void wb_tcp_filter::DoOnConnect(wb_tcp_link* cl, LPOVERLAPPED pol)
 		} while (0);
 		if(!b_ok)
 		{
+			OnCloseLink(tcp_link);
 			assert(0);
 			cl->close();
 		}
 		else
 		{
-			OnNewLink(tcp_link);
 			_lock.lock();
 			assert(_links.find(nbi) == _links.end());
 			_links[nbi] = tcp_link;
@@ -642,6 +648,7 @@ void wb_tcp_filter::OnRead(const ETH_PACK* pg, int len)
 	//if (pg->ip_h.uiDestIp != 0x42cecd3c)return;//调试阶段其他ip的tcp不处理
 	const ustrt_net_base_info & nbi = *(ustrt_net_base_info*)&pg->ip_h.uiSourIp;
 	auto t_flag = TCP_FLAG(pg->tcp_h.cFlag);
+	_read_packs++;
 	if (t_flag == TCP_SYN1)//建立新连接,如果存在旧的连接，先关闭旧连接
 	{
 		add_connect_link(pg, nbi);
@@ -681,7 +688,8 @@ void wb_tcp_filter::DoOnRecv(const char* buffer, int len, WB_TCP_OVERLAPPED* pol
 	//auto err = GetLastError();
 	if (len > 0)
 	{
-		assert(pol->p_lk->Ref() >= 2);
+		_recv_bytes += len;
+		assert(pol->p_lk->Ref() >= 1);
 		if(pol->p_lk->OnRecv(this,&pol->p_lk, buffer, len, &pol->ol))
 			post_recv(pol->p_lk.get(), &pol->p_lk, &pol->ol);
 	}

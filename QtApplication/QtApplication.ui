@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>718</width>
-    <height>484</height>
+    <width>1130</width>
+    <height>415</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -20,43 +20,43 @@
    <enum>QTabWidget::Rounded</enum>
   </property>
   <widget class="QWidget" name="centralWidget">
-   <widget class="QLabel" name="label_info">
+   <widget class="QLabel" name="label_flow_info">
     <property name="geometry">
      <rect>
       <x>10</x>
-      <y>366</y>
+      <y>232</y>
       <width>621</width>
       <height>16</height>
      </rect>
     </property>
     <property name="text">
-     <string>TextLabel</string>
+     <string>flow_info</string>
     </property>
    </widget>
    <widget class="QLabel" name="label_speed">
     <property name="geometry">
      <rect>
       <x>10</x>
-      <y>400</y>
+      <y>266</y>
       <width>621</width>
       <height>16</height>
      </rect>
     </property>
     <property name="text">
-     <string>TextLabel</string>
+     <string>speed_info</string>
     </property>
    </widget>
    <widget class="QLabel" name="label_mac_info">
     <property name="geometry">
      <rect>
       <x>10</x>
-      <y>330</y>
+      <y>196</y>
       <width>621</width>
       <height>16</height>
      </rect>
     </property>
     <property name="text">
-     <string>TextLabel</string>
+     <string>mac_info</string>
     </property>
    </widget>
    <widget class="QTableWidget" name="tableWidget">
@@ -64,8 +64,8 @@
      <rect>
       <x>10</x>
       <y>0</y>
-      <width>700</width>
-      <height>311</height>
+      <width>1120</width>
+      <height>181</height>
      </rect>
     </property>
     <property name="editTriggers">
@@ -73,33 +73,43 @@
     </property>
     <column>
      <property name="text">
-      <string>协议</string>
-     </property>
-    </column>
-    <column>
-     <property name="text">
-      <string>IP:端口</string>
-     </property>
-    </column>
-    <column>
-     <property name="text">
-      <string>发送</string>
-     </property>
-    </column>
-    <column>
-     <property name="text">
-      <string>接收</string>
+      <string>主机</string>
      </property>
     </column>
     <column>
      <property name="text">
       <string>机器码</string>
      </property>
+    </column>
+    <column>
+     <property name="text">
+      <string>连接数</string>
+     </property>
+    </column>
+    <column>
+     <property name="text">
+      <string>读包</string>
+     </property>
+    </column>
+    <column>
+     <property name="text">
+      <string>写包</string>
+     </property>
+    </column>
+    <column>
+     <property name="text">
+      <string>发送</string>
+     </property>
      <property name="font">
       <font>
        <weight>50</weight>
        <bold>false</bold>
       </font>
+     </property>
+    </column>
+    <column>
+     <property name="text">
+      <string>接收</string>
      </property>
     </column>
    </widget>
@@ -109,7 +119,7 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>718</width>
+     <width>1130</width>
      <height>23</height>
     </rect>
    </property>

@@ -88,7 +88,7 @@ bool wb_net_card_file::setFilter(PNET_IP_FILTER pFilter, int len)
 
 
 int get_local_ip() {
-	char hostname[128];
+	char hostname[128] = {};
 	int ret = gethostname(hostname, sizeof(hostname));
 	if (ret == -1) {
 		return -1;

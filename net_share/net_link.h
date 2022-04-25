@@ -24,8 +24,10 @@ protected:
 
 	void*					_pd;
 	//流量统计
-	std::atomic<INT64>		_recv_bytes=0;
-	std::atomic<INT64>		_send_bytes=0;
+	//std::atomic<INT64>		_recv_bytes=0;
+	//std::atomic<INT64>		_send_bytes=0;
+
+	wb_machine_event* _event=nullptr;
 public:
 	wb_net_link(const ETH_PACK* pg);
 
@@ -62,30 +64,42 @@ public:
 	virtual const ETH_PACK* make_pack(const char* buffer, int len,int &pack_len) = 0;
 	
 	virtual bool OnRecv(wb_filter_interface* p_fi, void* const lp_link, const char* buf, int len, LPOVERLAPPED pol) {
-		
-		_recv_bytes += len;
+		if (_event)
+			_event->OnRecv(this, len);
 		return true;
 	};//从网卡读取到网络包,len：包总长度
 	virtual bool OnSend(wb_filter_interface* p_fi, void* const lp_link, const char* buf, int len, LPOVERLAPPED pol) {
 		//WLOG("udp数据发送完成:%d\n", len);
-		_send_bytes += len;
+		if (_event)
+			_event->OnSend(this, len);
 		return true;
 	};//从网卡写完网络包
 
+	virtual bool OnRead(wb_filter_interface* p_fi, void* const lp_link, const ETH_PACK* pg, int len) {
+		if (_event)
+			_event->OnRead(this, len);
+		return true;
+	}
 	virtual bool OnWrite(wb_filter_interface* p_fi, const ETH_PACK* pg, int len) {
 		//WLOG("数据写完成:%d\n", len);
+		if (_event)
+			_event->OnWrite(this, len);
 		return true;
 	};//从网卡写完网络包
 
+	virtual bool OnSend_no_copy(wb_filter_interface* plink, void* const lp_link, char* buf, int len)
+	{
+		if (_event)
+			_event->OnSend(this, len);
+		return true;
+	}
 	virtual bool is_timeout() { 
 		//assert(0);
 		return true;
 	}
 
-	virtual wb_link_send_recv get_send_recv() const
-	{
-		return { _send_bytes ,_recv_bytes };
-	}
+	virtual void set_event(wb_machine_event* ev) { _event = ev; };
+	virtual wb_machine_event* get_event()const {return _event;}
 };
 
 struct FRAME_KEY
@@ -127,7 +141,7 @@ public:
 		close();
 	}
 	virtual bool OnRead(wb_filter_interface* p_fi, void* const lp_link, const ETH_PACK* pk, int len);
-	virtual bool OnSend_no_copy(wb_filter_interface* plink, void* const lp_link, char* buf, int len) { _send_bytes += len; return true; };
+	virtual bool OnSend_no_copy(wb_filter_interface* plink, void* const lp_link, char* buf, int len) { return true; };
 	virtual bool OnRecv(wb_filter_interface* p_fi, void* const lp_link, const char* buf, int len, LPOVERLAPPED pol);
 	//数据打包
 	virtual const ETH_PACK* make_pack_1st(const char* buffer, int len, int& pack_len);
@@ -217,7 +231,6 @@ class wb_icmp_link : public wb_link_interface
 public:
 
 	virtual const wb_link_info& get_link_info()const { return _info; };
-	virtual wb_link_send_recv get_send_recv() const { return {0,0}; }
 	wb_icmp_link(const ETH_PACK* pg) {
 		auto pif = (ustrt_net_base_info*)&pg->ip_h.uiSourIp;
 		_key.ip64 = pif->big_info.ip;
@@ -287,6 +300,8 @@ public:
 
 	virtual void set_data(void* pd) {};
 	virtual void* get_data() { return nullptr; };
+	virtual void set_event(wb_machine_event* ev) { }
+	virtual wb_machine_event* get_event()const { return nullptr; }
 };
 
 //TCP协议连接
@@ -346,9 +361,7 @@ public:
 			closesocket(_socket);
 		_socket = INVALID_SOCKET;
 	}
-	virtual bool OnWrite(wb_filter_interface* p_fi, const ETH_PACK* pg, int len) { 
-		return true;
-	}
+
 	bool connect();
 	void OnConnected(wb_filter_interface* p_fi) {
 		//构造握手包
@@ -367,7 +380,7 @@ public:
 
 	virtual bool OnSend_no_copy(wb_filter_interface* plink, void* const lp_link, char* buf, int len) {
 		WLOG("tcp %p OnSend_no_copy buf=%p\n" , this, buf);
-		_send_bytes += len;
+		__super::OnSend_no_copy(plink, lp_link, buf, len);
 		delete[]buf;
 		return true;
 	}

@@ -160,17 +160,22 @@ struct wb_link_info {
 };
 
 
-struct wb_link_send_recv {
+struct wb_flow_info {
 	INT64		send_bytes;
 	INT64		recv_bytes;
+
+	INT64		read_packs;
+	INT64		recv_packs;
 };
 
 __interface wb_link_interface;//连接对象
 __interface wb_filter_interface;//过滤器对象
 __interface wb_net_card_interface;//网卡对象
+__interface wb_machine_interface;//主机接口
 
-__interface wb_link_event;//连接对象
+__interface wb_machine_event;
 __interface wb_filter_event;//过滤器事件
+
 
 
 //连接接口
@@ -179,19 +184,13 @@ __interface wb_link_interface
 	virtual bool create_socket() = 0;
 	virtual void close() = 0;
 
-	virtual inline int AddRef() = 0;
-	virtual inline int DelRef() = 0;
-	virtual inline int Ref() = 0;
-
 	virtual bool Recv(LPWSABUF buffer, DWORD& dwFlags,sockaddr* addr,int* addr_len, LPOVERLAPPED pol) = 0;
 	virtual bool Send(LPWSABUF buffer, LPOVERLAPPED pol) = 0;
 
 	virtual const wb_link_info& get_link_info() const = 0;
-
-	virtual wb_link_send_recv get_send_recv() const  = 0;
-
 	virtual byte get_Protocol() const = 0 ;
-
+	virtual void set_event(wb_machine_event* ev) = 0;
+	virtual wb_machine_event* get_event()const  = 0;
 /*
 * OnRead,OnWrite,
 * 事件返回false，表示本连接不再需要,连接管理器将关闭连接并在适当的时候回收资源
@@ -222,6 +221,10 @@ __interface wb_filter_interface
 	virtual void back_data_pack_ex(wb_data_pack_ex*) = 0;//归还数据包结构
 
 	virtual void post_write(wb_link_interface* plink, const ETH_PACK* pk, int len, int data_len = 0) = 0;
+
+	virtual const wb_flow_info get_flow_info() const = 0;
+
+	//virtual const get_links() = 0 ;
 };
 
 //过滤器接收事件
@@ -239,8 +242,17 @@ __interface wb_net_card_interface
 };
 
 
-__interface wb_link_event
+__interface wb_machine_event 
 {
-	virtual bool OnNewLink(wb_link_interface* lk)=0;
-	virtual void OnCloseLink(wb_link_interface* lk) = 0;
+	virtual void OnRead(const wb_link_interface* lk, int len)=0;
+	virtual void OnWrite(const wb_link_interface* lk, int len)=0;
+
+	virtual void OnSend(const wb_link_interface* lk, int len)=0;
+	virtual void OnRecv(const wb_link_interface* lkc, int len)=0;
+};
+
+__interface wb_machine_interface
+{
+	virtual void AddLink(wb_link_interface* lk) = 0 ;
+	virtual void DelLink(const wb_link_interface* lk) = 0;
 };

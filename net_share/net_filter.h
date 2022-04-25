@@ -15,9 +15,11 @@ protected:
 	std::atomic<INT64>		_recv_bytes=0;
 	std::atomic<INT64>		_send_bytes=0;
 
-	wb_link_event*			_event;
+	std::atomic<INT64>		_read_packs = 0;
+	std::atomic<INT64>		_write_packs = 0;
+	wb_machine_interface*	_p_maci;
 public:
-	wb_net_filter(wb_net_card_interface* pnci, wb_link_event* ev=nullptr) :_p_nci(pnci), _event(ev){};
+	wb_net_filter(wb_net_card_interface* pnci, wb_machine_interface* ev=nullptr) :_p_nci(pnci), _p_maci(ev){};
 	virtual ~wb_net_filter() {};
 
 	virtual bool start(int thds) {
@@ -36,20 +38,24 @@ public:
 	virtual bool post_send_ex(wb_link_interface* plink, void* const lp_link, const char* buf, int len, void* pd) { return true; }
 	virtual void OnWrite(wb_link_interface* plink, const ETH_PACK* pg, int len) {
 		plink->OnWrite(this, pg, len);
+		_write_packs++;
 	};
 
 	virtual wb_data_pack_ex* get_data_pack_ex() { return nullptr; };//获取一个数据包结构
 	virtual void back_data_pack_ex(wb_data_pack_ex*) {};//归还数据包结构
 
-	void OnNewLink(wb_link_interface* lk) {
-		if (_event)
-			_event->OnNewLink(lk);
-	};
+	virtual const wb_flow_info get_flow_info() const{return { _send_bytes , _recv_bytes ,_read_packs,_write_packs};}		
 
-	void OnCloseLink(wb_link_interface* lk) {
-		if (_event)
-			_event->OnCloseLink(lk);
-	};
+
+	inline void OnCloseLink(const wb_net_link* lk) {
+		if (_p_maci)
+			_p_maci->DelLink(lk);
+	}
+
+	inline void OnNewLink(wb_net_link* lk) {
+		if (_p_maci)
+			_p_maci->AddLink(lk);
+	}
 };
 
 enum class udp_io_oper_type {
@@ -104,7 +110,7 @@ protected:
 	frame_data				_fd;
 	wb_lock					_f_lock;
 public:
-	wb_udp_filter(wb_net_card_interface* pnci, wb_link_event* ev = nullptr) :wb_net_filter(pnci,ev) {}
+	wb_udp_filter(wb_net_card_interface* pnci, wb_machine_interface* ev = nullptr) :wb_net_filter(pnci,ev) {}
 
 	virtual bool start(int thds);
 	virtual void stop();
@@ -124,6 +130,7 @@ public:
 		do
 		{
 			if (len <= 0)break;
+			_recv_bytes += len;
 			if (!pol->p_lk->OnRecv(this, &pol->p_lk, buffer, len, &pol->ol)) {
 				break;
 			}
@@ -141,6 +148,7 @@ public:
 		
 		if (len > 0)
 		{
+			_send_bytes += len;
 			if (pol->wbuf.len > len)
 			{
 				pol->wbuf.buf = pol->buf + len;
@@ -163,6 +171,7 @@ public:
 	}
 	virtual void DoOnSend_No_Copy(char* buffer, int len, WB_OVERLAPPED_UDP* pol) {
 		WLOG("delete buffer:%p  %d\n", buffer, len);
+		_send_bytes += len;
 		delete[]buffer;
 		WB_OVERLAPPED_UDP::operator delete(pol, _mop);  //_mop.recover_mem(pol);
 	}
@@ -207,11 +216,12 @@ class wb_icmp_filter : public wb_net_filter
 	wb_lock					_ic_lock;
 public:
 
-	wb_icmp_filter(wb_net_card_interface* pnci, wb_link_event* ev = nullptr) :wb_net_filter(pnci,ev) {}
+	wb_icmp_filter(wb_net_card_interface* pnci) :wb_net_filter(pnci) {}
 
 	virtual bool start(int thds);
 	virtual void stop();
 	
+	virtual const wb_flow_info get_flow_info() const { return { 0,0,0,0 }; };
 	//IO事件
 	virtual void DoOnRecv(const char* buffer, int len, WB_OVERLAPPED_ICMP* pol);
 	virtual void DoOnSend(const char* buffer, int len, WB_OVERLAPPED_ICMP* pol) {
@@ -273,7 +283,7 @@ class wb_tcp_filter :public wb_net_filter
 
 	std::thread			_check_thread;
 public:
-	wb_tcp_filter(wb_net_card_interface* pnci, wb_link_event* ev = nullptr) :wb_net_filter(pnci,ev) {}
+	wb_tcp_filter(wb_net_card_interface* pnci, wb_machine_interface* ev = nullptr) :wb_net_filter(pnci,ev) {}
 
 	virtual bool start(int thds);
 	virtual void stop() {
@@ -298,6 +308,7 @@ public:
 		assert(pol->p_lk.get());
 		if (len > 0)
 		{
+			_send_bytes += len;
 			if (pol->wbuf.len > len) {
 				pol->wbuf.buf = pol->no_copy + len;
 				pol->wbuf.len -= len;
@@ -314,6 +325,7 @@ public:
 	void DoOnSend_No_Copy(const char* buffer, int len, WB_TCP_OVERLAPPED* pol) {
 		if (len > 0)
 		{
+			_send_bytes += len;
 			if (pol->wbuf.len > len) {
 				pol->wbuf.buf = pol->wbuf.buf + len;
 				pol->wbuf.len -= len;
