@@ -110,10 +110,11 @@ public:
 	virtual void stop();
 	auto_udp_link get_link(const ustrt_net_base_info* pif, const ETH_PACK* pg);
 	void close_link(wb_net_link* plink) {
+		assert(plink);
 		auto nbi = (const ustrt_net_base_info&)(*plink);
 		plink->close();
 		_lock.lock();
-		auto it = _links.erase(nbi);
+		_links.erase(nbi);
 		_lock.unlock();
 	}
 
@@ -121,16 +122,18 @@ public:
 	virtual void DoOnRecv(const char* buffer, int len, WB_OVERLAPPED_UDP* pol) {
 		//WLOG("UDP recvÊý¾Ý:%d  %s\n",len,buffer);
 		int kl = 0;
+		wb_net_link* plk = nullptr;
 		do
 		{
 			if (len <= 0)break;
+			plk = pol->p_lk.get();
 			if (!pol->p_lk->OnRecv(this, &pol->p_lk, buffer, len, &pol->ol)) {
 				kl = 1;
 				break;
 			}
-
 			if (!post_recv(pol->p_lk, &pol->p_lk, &pol->ol))
 			{
+				WLOG("%p   \n", plk);
 				kl = 2;
 				break;
 			}
@@ -281,8 +284,18 @@ public:
 
 	virtual bool start(int thds);
 	virtual void stop() {
-		_active = false;
-		_check_thread.join();
+		_active = false;		
+		_conn_io.stop();
+		_io.stop();
+		if (_check_thread.joinable())
+			_check_thread.join();
+		_lock.lock();
+		_links.clear();
+		_lock.unlock();
+		_mlp.stop();
+		_mop.stop();
+		_mcp.stop();
+		_mdp.stop();
 	}
 
 	void close_link(auto_tcp_link& cl,char cFlag);

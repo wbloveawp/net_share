@@ -190,10 +190,11 @@ int main()
 	{
 		//特殊网络包测试	
 	}
+	system("pause");
     mainer m;
 	m.start();
     cin.get();
-    //m.stop();
+    m.stop();
 
-    //system("pause");
+    system("pause");
 }

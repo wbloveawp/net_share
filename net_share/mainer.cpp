@@ -175,7 +175,7 @@ void mainer::post_write(wb_filter_event* p_nce, wb_link_interface* plink, const 
 		}
 		if (!_ncf.Write(pl->buf, len, &pl->ol))
 		{
-			RLOG("_ncf 失败:%d   %d\n", GetLastError(), writes.load());
+			//RLOG("_ncf 失败:%d   %d\n", GetLastError(), writes.load());
 			_mp.recover_mem(pl);
 		}
 		else
@@ -219,7 +219,7 @@ void mainer::DoOnRead(DWORD numberOfBytes, WB_OVERLAPPED* pl) {
 	if (!_ncf.Read(pl->buf, MAX_MAC_LEN, &pl->ol)) {
 		WLOG("_ncf.Read重新投递失败%d\n", GetLastError());
 		_default_reads--;
-		stop();
+		//stop();
 	}
 }
 //github提交测试

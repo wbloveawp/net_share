@@ -4,6 +4,7 @@
 
 wb_net_link::wb_net_link(const ETH_PACK* pg){
 	_nbi = *((ustrt_net_base_info*)&pg->ip_h.uiSourIp);
+	//_info.ip_info = _nbi;
 	memcpy(_info.mac, pg->SrcAddr, MAC_ADDR_LEN);
 	//assert(_nbi.ip_info.dst_port==0xa283);
 	//WLOG("udp:%p         [%x  %x] \n", this, _nbi.ip_info.dst_port, _nbi.ip_info.src_port);
@@ -258,7 +259,7 @@ wb_tcp_link::wb_tcp_link(const ETH_PACK* p_pack) :wb_net_link(p_pack) {
 	sockaddr_in addr = {};
 	addr.sin_addr.S_un.S_addr = p_pack->ip_h.uiDestIp;
 	_ip = inet_ntoa(addr.sin_addr);
-	WLOG("tcp[%s   %d]本地端口:%d linke 构造%p\n", _ip.c_str(), ntohs(p_pack->tcp_h.sDestPort), ntohs(p_pack->tcp_h.sSourPort), this);
+	//WLOG("tcp[%s   %d]本地端口:%d linke 构造%p\n", _ip.c_str(), ntohs(p_pack->tcp_h.sDestPort), ntohs(p_pack->tcp_h.sSourPort), this);
 #endif // _DEBUG
 }
 const ETH_PACK* wb_tcp_link::make_pack_syn(int& pack_len)

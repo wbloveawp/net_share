@@ -68,16 +68,18 @@ bool wb_udp_filter::start(int thds) {
 void wb_udp_filter::stop() {
 	//遍历关闭连接
 	_active = false;
-	_lock.lock();
-	for (auto i: _links)
-		i.second->close();
-	_lock.unlock();
-
-	std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+	//std::this_thread::sleep_for(std::chrono::milliseconds(1000));
 	if (_check_t.joinable()) {
 		_check_t.join();
 	}
 	_io.stop();
+
+	_lock.lock();
+	//for (auto i : _links)
+		//i.second->close();
+	_links.clear();
+	_lock.unlock();
+
 	__super::stop();
 	_mlp.stop();
 	_mop.stop();
@@ -277,8 +279,13 @@ void wb_udp_filter::OnRead(const ETH_PACK* pk, int len)
 bool wb_udp_filter::post_recv(wb_link_interface* plink, void* const lp_link, LPOVERLAPPED pol)
 {
 	WB_OVERLAPPED_UDP* pu = (WB_OVERLAPPED_UDP*)pol;
-	if(!pu)
+	char del_flag = 0;
+	if (!pu)
+	{
 		pu = (WB_OVERLAPPED_UDP*)_mop.get_mem();
+		del_flag = 1;
+	}
+
 	if (pu)
 	{
 		pu->wbuf.buf = pu->buf;
@@ -287,7 +294,8 @@ bool wb_udp_filter::post_recv(wb_link_interface* plink, void* const lp_link, LPO
 		pu->p_lk = *((auto_udp_link*)lp_link);
 		pu->addr_len = sizeof(sockaddr_in);
 		if (!plink->Recv(&pu->wbuf, pu->dwFlag, (sockaddr*)&pu->addr, &pu->addr_len, &pu->ol)) {
-			WB_OVERLAPPED_UDP::operator delete(pu, _mop);// _mop.recover_mem(pu);
+			if(del_flag)
+				WB_OVERLAPPED_UDP::operator delete(pu, _mop);// _mop.recover_mem(pu);
 			return false;
 		}
 	}
@@ -547,7 +555,6 @@ bool wb_tcp_filter::start(int thds)
 	_check_thread = std::thread([=]() {
 		while (this->_active)
 		{
-			std::this_thread::sleep_for(std::chrono::seconds(5));
 			this->_lock.lock();
 			auto que = this->_links;
 			this->_lock.unlock();
@@ -559,6 +566,7 @@ bool wb_tcp_filter::start(int thds)
 					i.second->close();
 				}
 			}
+			std::this_thread::sleep_for(std::chrono::seconds(10));
 		}
 	});
 	//t.detach();
@@ -572,6 +580,7 @@ void wb_tcp_filter::close_link(auto_tcp_link& cl,char cFlag)
 	_lock.lock();
 	auto it = _links.erase(nbi);
 	_lock.unlock();
+	//WLOG("tcp close:%p   \n",cl.get());
 	if(it>0)
 		OnCloseLink(cl);
 	//执行断开
@@ -669,7 +678,7 @@ void wb_tcp_filter::OnRead(const ETH_PACK* pg, int len)
 }
 
 void wb_tcp_filter::DoOnRecv(const char* buffer, int len, WB_TCP_OVERLAPPED* pol) {
-	auto err = GetLastError();
+	//auto err = GetLastError();
 	if (len > 0)
 	{
 		assert(pol->p_lk->Ref() >= 2);
@@ -678,6 +687,7 @@ void wb_tcp_filter::DoOnRecv(const char* buffer, int len, WB_TCP_OVERLAPPED* pol
 	}
 	else
 	{
+		//WLOG("连接断开:%p  %d \n", pol->p_lk.get(),GetLastError());
 		close_link(pol->p_lk,0);
 		WB_TCP_OVERLAPPED::operator delete(pol, _mop);  //_mop.recover_mem(pol);
 	}

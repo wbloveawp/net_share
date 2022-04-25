@@ -20,7 +20,7 @@ protected:
 
 	wb_link_info			_info;
 
-	ustrt_net_base_info&	_nbi= _info.ip_info;
+	ustrt_net_base_info&	_nbi = _info.ip_info;
 
 	void*					_pd;
 	//流量统计
@@ -121,6 +121,9 @@ class wb_udp_link :public wb_net_link
 public:
 	wb_udp_link(const ETH_PACK* pg, const ustrt_net_base_info* pif);
 	virtual ~wb_udp_link() { 
+		//static wb_lock del_ock;
+		//AUTO_LOCK(del_ock);
+		//WLOG("UDP %p 释放....\n",this);
 		close();
 	}
 	virtual bool OnRead(wb_filter_interface* p_fi, void* const lp_link, const ETH_PACK* pk, int len);
@@ -330,7 +333,7 @@ public:
 		sockaddr_in addr = {};
 		addr.sin_addr.S_un.S_addr = _m_ip_h.uiSourIp;
 		_ip = inet_ntoa(addr.sin_addr);
-		WLOG("tcp[%s   %d]本地端口:%d linke 释放%p\n", _ip.c_str(), ntohs(_tcp_h.sSourPort), ntohs(_tcp_h.sDestPort), this);
+		//WLOG("tcp[%s   %d]本地端口:%d linke 释放%p\n", _ip.c_str(), ntohs(_tcp_h.sSourPort), ntohs(_tcp_h.sDestPort), this);
 #endif // DEBUG
 	};
 	virtual bool create_socket() {
