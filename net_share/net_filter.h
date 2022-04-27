@@ -118,6 +118,7 @@ public:
 	void close_link(wb_net_link* plink) {
 		assert(plink);
 		auto nbi = (const ustrt_net_base_info&)(*plink);
+		//OnCloseLink(plink);
 		plink->close();
 		_lock.lock();
 		_links.erase(nbi);
@@ -343,7 +344,6 @@ public:
 	auto_tcp_link get_link(const ustrt_net_base_info& nbi);
 	void write_rst_pack(const ETH_PACK* pg);
 	virtual void OnRead(const ETH_PACK* pg, int len) ;//从网卡读取到网络包,len：包总长度
-
 	virtual bool post_recv(wb_link_interface* plink, void* const lp_link, LPOVERLAPPED pol);
 	virtual bool post_send(wb_link_interface* plink, void* const lp_link, const char* buf, int len);
 	virtual bool post_send_no_copy(wb_link_interface* plink, void* const lp_link, char* buf, int len);

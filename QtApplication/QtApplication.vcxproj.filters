@@ -69,11 +69,6 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <Image Include="C:\Users\wb\Desktop\btn.png">
-      <Filter>Resource Files</Filter>
-    </Image>
-  </ItemGroup>
-  <ItemGroup>
     <ClInclude Include="..\net_share\base_component.h">
       <Filter>net_share</Filter>
     </ClInclude>

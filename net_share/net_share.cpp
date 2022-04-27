@@ -160,6 +160,27 @@ public:
 using share_ptr = my_share_ptr<MyClass>;
 using my_que = std::map<int, share_ptr>;
 
+
+class wb_mac_event : public wb_machine_event
+{
+	virtual void OnRead(const wb_link_interface* lk, int len) {};
+	virtual void OnWrite(const wb_link_interface* lk, int len) {};
+
+	virtual void OnSend(const wb_link_interface* lk, int len) {};
+	virtual void OnRecv(const wb_link_interface* lkc, int len) {};
+};
+
+wb_mac_event mac_e;
+
+class wb_mac_interface :public wb_machine_interface
+{
+	virtual void AddLink(wb_link_interface* lk) {
+		WLOG("%p set_event %p \n" , lk , &mac_e);
+		lk->set_event(&mac_e);
+	};
+	virtual void DelLink(const wb_link_interface* lk) {};
+};
+
 int main()
 {
 	if(0)
@@ -191,10 +212,11 @@ int main()
 		//特殊网络包测试	
 	}
 	system("pause");
-    mainer m;
-	m.start();
+	wb_mac_interface mac_i;
+	mainer* m = new mainer(&mac_i);
+	m->start();
     cin.get();
-    m.stop();
+    m->stop();
 
     system("pause");
 }

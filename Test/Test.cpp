@@ -64,11 +64,30 @@ p_fun(
 int main()
 {
 
-    auto a = sizeof(A);
+    std::atomic<INT64> recv_byte = 0;
 
-    auto b = sizeof(B);
-    T t;
-    std::cout << t;
-    Fun(11, 12.0,"我擦","12313");
+    std::thread t = std::thread([&]() {
+        for (size_t i = 0; i < 10000000; i++)
+        {
+            recv_byte+=5;
+        }
+       
+        });
+
+    std::thread t1 = std::thread([&]() {
+        for (size_t i = 0; i < 10000000; i++)
+        {
+            recv_byte+=5;
+        }
+        });
+    std::cout << "start" << std::endl;
+    t1.detach();
+    t.detach();
+    for (size_t i = 0; i < 10000000; i++)
+    {
+        recv_byte += 5;
+    }
+    system("pause");
+    std::cout << recv_byte << std::endl;
     std::cin.get();
 }

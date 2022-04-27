@@ -202,7 +202,7 @@ void tcp_server()
 #ifdef _DEBUG
     add.sin_addr.S_un.S_addr = inet_addr("127.0.0.1");
 #else
-    add.sin_addr.S_un.S_addr = inet_addr("127.0.0.1");
+    add.sin_addr.S_un.S_addr = inet_addr("192.168.2.49");
 #endif
     if (SOCKET_ERROR == ::bind(s, (sockaddr*)&add, sizeof(sockaddr_in)))
     {
@@ -225,22 +225,26 @@ void tcp_server()
             SOCKET as = accept(s, (sockaddr*)&add, &addr_len);
             if (as == INVALID_SOCKET)break;
             std::thread recv_t = std::thread([=]() {
-                char buf[8192] = {};
+                char buf[8192+2500] = {};
                 int ret = 0;
                 do
                 {
                     ret = recv(as, buf, 8192, 0);
                     printf("服务器recv返回:%d %s\n", ret, buf);
+
+                    
                     if (ret) {
-                        if (send(as, buf, ret, 0) <= 0) {
+                        if (send(as, buf, 8192 + 2500, 0) <= 0) {
                             printf("服务器send失败:%d\n", GetLastError());
                             break;
                         }
                         else
-                            printf("我已回复数据:%d\n", ret);
+                        {
+                            //printf("我已回复数据:%d\n", ret);
+                        }
+
                     }
-                    if (ret >= 10 && ret<1000)
-                        break;
+                    
                 } while (ret > 0);
                 closesocket(as);
                 });
@@ -279,13 +283,17 @@ void tcp_client()
     //closesocket(s);
     
     char t = 1;
+    INT64 _all_recv = 0;
+    int send_times = 0;
+    int len = 0;
+    cin >> len;
+    cin.get();
+    printf("\n");
     do
     {
-        int len = 0;
-        cin >> len;
-        cin.get();
-        printf("\n");
-        char buf[8192] = {};
+
+
+        char buf[8192+4096] = {};
         memset(buf, '1', len);
         int send_len = send(s, buf, len + 1, 0);
         if (send_len <= 0)
@@ -293,16 +301,21 @@ void tcp_client()
             printf("send 失败:%d\n",GetLastError());
             break;
         }
-        printf("send 成功:%d %s\n", send_len , buf );
+       // printf("send 成功:%d %s\n", send_len , buf );
+        //_all_send += send_len;
         char rbuf[8192] = {};
-        int rt = recv(s, rbuf, 8192, 0);
+        int rt = recv(s, rbuf, 4096, MSG_PEEK);
+        cout <<"收:" <<rt << " err="<< GetLastError() << endl;
         if (rt <= 0)break;
-        printf("recv 成功:%d %s\n", rt ,rbuf );
-        cin >> t;
-        cin.get();
-    } while (t!='0' && t!='1');
-    if(t=='1')
-        closesocket(s);
+        _all_recv += rt;
+        //printf("recv 成功:%d %s\n", rt ,rbuf );
+       // cin >> t;
+        //cin.get();
+    } while (send_times-->0);
+    cout << "收" << _all_recv / 1024 << "KB" << endl;
+     closesocket(s);
+
+     
 }
 
 

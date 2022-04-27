@@ -6,7 +6,7 @@
 
 
 mainer::mainer(wb_machine_interface* mi){
-	_udp = new wb_udp_filter(this);
+	_udp = new wb_udp_filter(this, mi);
 	_tcp = new wb_tcp_filter(this,mi);
 	_icmp = new wb_icmp_filter(this);
 	if (!_udp || !_tcp || !_icmp)
@@ -23,7 +23,7 @@ mainer::~mainer() {
 bool mainer::start() {
 	SYSTEM_INFO si = {};
 	GetSystemInfo(&si);
-	auto ithreads =  si.dwNumberOfProcessors * 2 + 2;//默认启动线程数，release下使用默认cpu*2+2
+	auto ithreads = 1;// si.dwNumberOfProcessors * 2 + 2;//默认启动线程数，release下使用默认cpu*2+2
 	WLOG("ithreads=%d\n", ithreads);
 	//ithreads = 1;
 	//网卡数据读取

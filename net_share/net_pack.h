@@ -165,7 +165,7 @@ struct wb_flow_info {
 	INT64		recv_bytes;
 
 	INT64		read_packs;
-	INT64		recv_packs;
+	INT64		write_packs;
 };
 
 __interface wb_link_interface;//连接对象

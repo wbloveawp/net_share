@@ -100,9 +100,6 @@
     <ClCompile Include="main.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <Image Include="C:\Users\wb\Desktop\btn.png" />
-  </ItemGroup>
-  <ItemGroup>
     <ClInclude Include="..\net_share\base_component.h" />
     <ClInclude Include="..\net_share\base_def.h" />
     <ClInclude Include="..\net_share\evn_init.h" />

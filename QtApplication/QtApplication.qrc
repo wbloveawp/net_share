@@ -1,5 +1,7 @@
 <RCC>
-    <qresource prefix="/QtApplication">
-        <file>C:/Users/wb/Desktop/btn.png</file>
-    </qresource>
+  <qresource prefix="/QtApplication">
+    <file>rc/btn.png</file>
+    <file>rc/dn.png</file>
+    <file>rc/w6.ico</file>
+  </qresource>
 </RCC>

@@ -62,12 +62,14 @@ wb_udp_link::wb_udp_link(const ETH_PACK* pg,const ustrt_net_base_info* pif) :wb_
 bool  wb_udp_link::OnRead(wb_filter_interface* p_fi, void* const lp_link, const ETH_PACK* pk, int len)
 {
 	_last_op_time = time(0);
+	__super::OnRead(p_fi, lp_link, pk, len);
 	return p_fi->post_send(this, lp_link, get_udp_pack_date(pk), get_udp_pack_date_len(pk));//非分片
 }
 
 bool wb_udp_link::OnRecv(wb_filter_interface* p_fi, void* const lp_link, const char* buf, int len, LPOVERLAPPED pol)
 {
 	//大包写数据,大包多次写 写完成后 再recv
+	//__super::OnRecv(p_fi, lp_link, buf, len, pol);
 	_last_op_time = time(0);
 	if (len <= c_udp_data_len_max)
 	{
@@ -587,11 +589,13 @@ bool wb_tcp_link::OnRead(wb_filter_interface* p_fi, void* const lp_link, const E
 
 bool wb_tcp_link::OnRecv(wb_filter_interface* p_fi, void* const lp_link, const char* buf, int len, LPOVERLAPPED pol)
 {
-	__super::OnRecv(p_fi,lp_link, buf, len, pol);
+	if (_data_len <= 0)
+		__super::OnRecv(p_fi, lp_link, buf, len, pol);
 	AUTO_LOCK(_pack_lock);
 	_last_op_time = time(0);
 	int dlt = 0, w_len = 0;
 	int out_l = 0; 
+	auto err = GetLastError();
 	do
 	{
 		//窗口控制
@@ -612,11 +616,15 @@ bool wb_tcp_link::OnRecv(wb_filter_interface* p_fi, void* const lp_link, const c
 			//if(inet_addr("221.228.195.121")== _m_ip_h.uiSourIp)
 				//WLOG("tcp<%p>:_next_win_max=%d nwm=%d len=%d 剩余:%d  [seq=%ud ack=%ud]\n",this, _next_win_max, s_nwm, s_len, pl->wbuf.len,_seq,_ack);
 			//assert(len > 0);
+			/*
 			if (_data_len > TCP_RECV_SIZE) {
 				_pol = pol;
 				return false;
 			}
 			return true;
+			*/
+			_pol = pol;
+			return false;
 		}
 
 	} while (len>0);

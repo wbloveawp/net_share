@@ -49,11 +49,13 @@ class wb_machine_event_ui : public wb_machine_event
     std::atomic<INT64> _send_bytes = 0;
     std::atomic<INT64> _recv_bytes = 0;
 
-
     mac_info _last_info = {};
-public:
-    wb_machine_event_ui(QTableWidget* tw , INT ip,const unsigned char mac[MAC_ADDR_LEN]):_i_ip(ip){
 
+    mainer* _m = nullptr;
+public:
+    wb_machine_event_ui(mainer* m , QTableWidget* tw , INT ip,const unsigned char mac[MAC_ADDR_LEN]):_i_ip(ip){
+
+        _m = m;
         in_addr ia = {};
         ia.S_un.S_addr = _i_ip;
         _szIP = inet_ntoa(ia);
@@ -63,6 +65,8 @@ public:
             sprintf(_mac + i * 3, "%x ", mac[i]);
         }
         _item0 = new QTableWidgetItem(_szIP);
+        
+        _item0->setIcon(QIcon(":/QtApplication/rc/dn.png"));
         tw->insertRow(0);
         tw->setItem(0, 0, _item0);
         tw->setItem(0, 1, _item1 = new QTableWidgetItem(_mac));
@@ -96,10 +100,13 @@ public:
         _send_bytes += len;
     }
     virtual void OnRecv(const wb_link_interface* lkc, int len) {
-        _recv_bytes += len;
+        _recv_bytes+=len;
+        //assert(_m->get_net_info(PRO_TCP).recv_bytes == _recv_bytes);
     }
 
     void update(float seconds) {
+
+        
         _item2->setData(0, _links.load());
 
         char msg[128] = { 0 };
@@ -151,6 +158,10 @@ protected:
     bool _bstart = false;
     wb_lock _lock;
     wb_mac_map _macs;
+
+    HANDLE _pHandle;
+
+    decltype(ULARGE_INTEGER::QuadPart) _last_time=0;
 public:
     virtual void AddLink(wb_link_interface* lk) {
         AUTO_LOCK(_lock);
@@ -162,11 +173,11 @@ public:
         }
         else
         {
-            auto mac = new wb_machine_event_ui(ui.tableWidget,info.ip_info.ip_info.src_ip, info.mac);
+            auto mac = new wb_machine_event_ui(m, ui.tableWidget,info.ip_info.ip_info.src_ip, info.mac);
             if (mac)
             {
-                mac->OnNewLink(lk);
                 _macs[mac->get_ip_int()] = mac;
+                mac->OnNewLink(lk);
             }
         }
     };

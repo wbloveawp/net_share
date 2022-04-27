@@ -27,7 +27,7 @@ protected:
 	//std::atomic<INT64>		_recv_bytes=0;
 	//std::atomic<INT64>		_send_bytes=0;
 
-	wb_machine_event* _event=nullptr;
+	wb_machine_event* _mac_event=nullptr;
 public:
 	wb_net_link(const ETH_PACK* pg);
 
@@ -64,33 +64,34 @@ public:
 	virtual const ETH_PACK* make_pack(const char* buffer, int len,int &pack_len) = 0;
 	
 	virtual bool OnRecv(wb_filter_interface* p_fi, void* const lp_link, const char* buf, int len, LPOVERLAPPED pol) {
-		if (_event)
-			_event->OnRecv(this, len);
+		assert(_mac_event);
+		if (_mac_event)
+			_mac_event->OnRecv(this, len);
 		return true;
 	};//从网卡读取到网络包,len：包总长度
 	virtual bool OnSend(wb_filter_interface* p_fi, void* const lp_link, const char* buf, int len, LPOVERLAPPED pol) {
 		//WLOG("udp数据发送完成:%d\n", len);
-		if (_event)
-			_event->OnSend(this, len);
+		if (_mac_event)
+			_mac_event->OnSend(this, len);
 		return true;
 	};//从网卡写完网络包
 
 	virtual bool OnRead(wb_filter_interface* p_fi, void* const lp_link, const ETH_PACK* pg, int len) {
-		if (_event)
-			_event->OnRead(this, len);
+		if (_mac_event)
+			_mac_event->OnRead(this, len);
 		return true;
 	}
 	virtual bool OnWrite(wb_filter_interface* p_fi, const ETH_PACK* pg, int len) {
 		//WLOG("数据写完成:%d\n", len);
-		if (_event)
-			_event->OnWrite(this, len);
+		if (_mac_event)
+			_mac_event->OnWrite(this, len);
 		return true;
 	};//从网卡写完网络包
 
 	virtual bool OnSend_no_copy(wb_filter_interface* plink, void* const lp_link, char* buf, int len)
 	{
-		if (_event)
-			_event->OnSend(this, len);
+		if (_mac_event)
+			_mac_event->OnSend(this, len);
 		return true;
 	}
 	virtual bool is_timeout() { 
@@ -98,8 +99,11 @@ public:
 		return true;
 	}
 
-	virtual void set_event(wb_machine_event* ev) { _event = ev; };
-	virtual wb_machine_event* get_event()const {return _event;}
+	virtual void set_event(wb_machine_event* ev) { 
+		assert(ev); 
+		_mac_event = ev;
+	};
+	virtual wb_machine_event* get_event()const {return _mac_event;}
 };
 
 struct FRAME_KEY
@@ -141,7 +145,7 @@ public:
 		close();
 	}
 	virtual bool OnRead(wb_filter_interface* p_fi, void* const lp_link, const ETH_PACK* pk, int len);
-	virtual bool OnSend_no_copy(wb_filter_interface* plink, void* const lp_link, char* buf, int len) { return true; };
+	//virtual bool OnSend_no_copy(wb_filter_interface* plink, void* const lp_link, char* buf, int len) { return __sup; };
 	virtual bool OnRecv(wb_filter_interface* p_fi, void* const lp_link, const char* buf, int len, LPOVERLAPPED pol);
 	//数据打包
 	virtual const ETH_PACK* make_pack_1st(const char* buffer, int len, int& pack_len);

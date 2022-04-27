@@ -110,8 +110,10 @@ wb_udp_filter::auto_udp_link wb_udp_filter::get_link(const ustrt_net_base_info* 
 
 #endif 
 		bool bt = false;
-		if (plink) {
+		if (plink) 
+		{
 			do {
+				//this->OnNewLink(plink);
 				if (!plink->create_socket())
 				{
 					WLOG("udp create_socket Ê§°Ü:%d\n", GetLastError());
@@ -123,6 +125,7 @@ wb_udp_filter::auto_udp_link wb_udp_filter::get_link(const ustrt_net_base_info* 
 					WLOG("udp relate Ê§°Ü:%d\n", GetLastError());
 					break;
 				}
+
 				if (!post_recv(plink,&plink, nullptr))
 				{
 					WLOG("udp post_recv Ê§°Ü:%d\n", GetLastError());
@@ -137,6 +140,7 @@ wb_udp_filter::auto_udp_link wb_udp_filter::get_link(const ustrt_net_base_info* 
 			}
 			else
 			{
+				//OnCloseLink(plink);
 				plink = auto_udp_link(nullptr,nullptr);
 			}
 		}
@@ -390,7 +394,6 @@ bool wb_icmp_filter::start(int thds)
 	std::thread t = std::thread([=]() {
 		while (_r_sock != INVALID_SOCKET)
 		{
-			std::this_thread::sleep_for(std::chrono::seconds(3));
 			this->_lock.lock();
 			auto lks =  this->_links;
 			this->_lock.unlock();
@@ -416,6 +419,7 @@ bool wb_icmp_filter::start(int thds)
 					this->_ic_lock.unlock();
 				}
 			}
+			std::this_thread::sleep_for(std::chrono::seconds(3));
 		}
 		});
 	t.detach();
@@ -597,7 +601,8 @@ void wb_tcp_filter::DoOnConnect(wb_tcp_link* cl, LPOVERLAPPED pol)
 	{
 		auto_tcp_link tcp_link(cl, &_mlp);
 		bool b_ok = false;
-		OnNewLink(tcp_link);
+		OnNewLink(cl);
+		assert(cl->get_event());
 		do
 		{
 			if (!_io.relate((HANDLE)((SOCKET)*cl), nullptr))
@@ -605,6 +610,7 @@ void wb_tcp_filter::DoOnConnect(wb_tcp_link* cl, LPOVERLAPPED pol)
 				assert(0);
 				break;
 			}
+			assert(cl->get_event());
 			if (!post_recv(cl, &tcp_link, nullptr))
 			{
 				assert(0);
@@ -624,6 +630,7 @@ void wb_tcp_filter::DoOnConnect(wb_tcp_link* cl, LPOVERLAPPED pol)
 			assert(_links.find(nbi) == _links.end());
 			_links[nbi] = tcp_link;
 			_lock.unlock();
+			assert(cl->get_event());
 			cl->OnConnected(this);
 		}
 	}
@@ -688,7 +695,13 @@ void wb_tcp_filter::DoOnRecv(const char* buffer, int len, WB_TCP_OVERLAPPED* pol
 	//auto err = GetLastError();
 	if (len > 0)
 	{
-		_recv_bytes += len;
+		auto err = WSAGetLastError();
+		if (997 == GetLastError())
+		{
+			int kl = 0;
+		}
+		
+		_recv_bytes+=len ;
 		assert(pol->p_lk->Ref() >= 1);
 		if(pol->p_lk->OnRecv(this,&pol->p_lk, buffer, len, &pol->ol))
 			post_recv(pol->p_lk.get(), &pol->p_lk, &pol->ol);
