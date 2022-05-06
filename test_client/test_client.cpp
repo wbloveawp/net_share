@@ -44,9 +44,70 @@ SOCKET get_udp_socket() {
     return FSocket;
 }
 
+
+
+template <class  T>
+class Tree
+{
+
+
+    struct Node
+    {
+        T       data;
+        Node*   left;
+        Node*   right;
+    };
+
+    Node  _node = {};
+ 
+public:
+    Tree();
+    Tree(const T& t) {
+        _node.data = t;
+    }
+
+    void insert(const T& t) {
+        if (!_node.data)
+        {
+            _node.data = t;
+            return;
+        }
+        Node* tn = &_node;
+        for (;tn;)
+        {
+            if (t < tn->data)
+            {
+                if (!tn->left)
+                {
+                    tn->left = new Node();
+                    tn->left->data = t;
+                    return;
+                }
+                tn = tn->left;
+            }
+            else
+            {
+                if (!tn->right)
+                {
+                    tn->right = new Node();
+                    tn->right->data = t;
+                    return;
+                }
+                tn = tn->right;
+            }
+        }
+    }
+};
+
 int main()
 {
     
+    Tree<int> tr(12);
+    tr.insert(13);
+    tr.insert(10);
+    tr.insert(11);
+
+    system("pause");
 }
 
 // 运行程序: Ctrl + F5 或调试 >“开始执行(不调试)”菜单

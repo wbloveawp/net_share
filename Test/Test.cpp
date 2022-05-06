@@ -21,6 +21,8 @@ void Fun(const T& a, const args&...ags)
     Fun(ags...);
 }
 
+
+
 class T
 {
     
@@ -61,33 +63,49 @@ p_fun(
     return 12;
 }
 
+using namespace std;
+
+
+
+class Mt
+{
+    friend std::ostream & operator << (std::ostream & ct ,const Mt &t) {
+        return ct << "this Mt cout "<<&t ;
+    }
+public:
+
+};
+
+template <class t>
+void print(t a)
+{
+    cout << a <<" ";
+}
+
+template <class ... cls>
+void print(cls...agv);
+
+template <class t,class ... cls>
+void print(t a, cls...agv) {
+    print(a);
+    print(agv...);
+    cout << endl;
+}
+
+
 int main()
 {
 
-    std::atomic<INT64> recv_byte = 0;
+    int* ar = new int[12];
 
-    std::thread t = std::thread([&]() {
-        for (size_t i = 0; i < 10000000; i++)
-        {
-            recv_byte+=5;
-        }
-       
-        });
+    ar[12] = 19;
 
-    std::thread t1 = std::thread([&]() {
-        for (size_t i = 0; i < 10000000; i++)
-        {
-            recv_byte+=5;
-        }
-        });
-    std::cout << "start" << std::endl;
-    t1.detach();
-    t.detach();
-    for (size_t i = 0; i < 10000000; i++)
-    {
-        recv_byte += 5;
-    }
+    std::tuple<string, int> t = { "121",11 };
+    auto k = std::make_tuple<int, double>(11,1.0);
+
+    auto kl = std::get<0>(k);
+    print(1121,11.0,"asda",Mt(), kl);
+    
     system("pause");
-    std::cout << recv_byte << std::endl;
-    std::cin.get();
+
 }

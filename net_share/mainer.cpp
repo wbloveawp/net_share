@@ -23,7 +23,7 @@ mainer::~mainer() {
 bool mainer::start() {
 	SYSTEM_INFO si = {};
 	GetSystemInfo(&si);
-	auto ithreads = 1;// si.dwNumberOfProcessors * 2 + 2;//默认启动线程数，release下使用默认cpu*2+2
+	auto ithreads = si.dwNumberOfProcessors * 2 + 2;//默认启动线程数，release下使用默认cpu*2+2
 	WLOG("ithreads=%d\n", ithreads);
 	//ithreads = 1;
 	//网卡数据读取

@@ -392,8 +392,14 @@ public:
 using t_map = std::map<int, wb_share_prt<Test>>;
 using s_map = std::map<int, std::shared_ptr<Test>>;
 
+void tfun(int) {
+
+}
 int main()
 {
+    void (*p)(int) = tfun;
+
+    p(1);
     t_map tm;
     s_map sm;
     {
@@ -471,6 +477,9 @@ int main()
     }
     system("pause");
     b_ac = false;
+
+
+
 
     this_thread::sleep_for(chrono::seconds(1));
 }
