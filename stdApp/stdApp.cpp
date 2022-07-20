@@ -3,7 +3,7 @@
 #include <windows.h>
 #include <iostream>
 #include <bitset>
-
+#include <functional>
 using namespace std;
 
 void foo()noexcept
@@ -57,6 +57,20 @@ public:
     }
 };
 
+//lambda 测试
+
+void lamdba_test()
+{
+    using int_fun = std::function<int(int, int)>;
+    int_fun f = [](int x, int y) {
+
+        int k();
+        return x * y;
+    };
+
+    f(11, 12);
+}
+
 int main()
 {
 
@@ -66,7 +80,7 @@ int main()
 
     cout << c[3];
     C c1(std::move(c));
-
+ 
     std::cout << "Hello World!\n";
     
     C c2(1, 0);

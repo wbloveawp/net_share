@@ -194,6 +194,25 @@ public:
 		return *this;
 	}
 
+	wb_share_ptr& operator = (wb_share_ptr&& p) {
+		if (this == &p)return *this;
+		if (_ptr && _ptr->DelRef() == 0)
+			elment_type::operator delete (_ptr, *_mp);
+		_mp = p._mp;
+		_ptr = p._ptr;
+		p._mp = nullptr;
+		p._ptr = nullptr;
+		return *this;
+	}
+
+	wb_share_ptr(wb_share_ptr&& rv) {
+		_mp = sp._mp;
+		_ptr = sp._ptr;
+
+		sp._mp = nullptr;
+		sp._ptr = nullptr;
+	}
+
 	operator Ty* () {
 		return _ptr;
 	}
