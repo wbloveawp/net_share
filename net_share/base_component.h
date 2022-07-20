@@ -206,11 +206,11 @@ public:
 	}
 
 	wb_share_ptr(wb_share_ptr&& rv) {
-		_mp = sp._mp;
-		_ptr = sp._ptr;
+		_mp = rv._mp;
+		_ptr = rv._ptr;
 
-		sp._mp = nullptr;
-		sp._ptr = nullptr;
+		rv._mp = nullptr;
+		rv._ptr = nullptr;
 	}
 
 	operator Ty* () {
