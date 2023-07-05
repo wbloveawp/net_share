@@ -6,10 +6,10 @@ constexpr int c_mac_head_len	= sizeof(ETH_HEADER);	//帧头长度
 constexpr int c_ip_head_len		= sizeof(IP_HEADER);	//ip头长度
 constexpr int c_udp_head_len	= sizeof(UDP_HEADER);	//udp头长度
 constexpr int c_tcp_head_len	= sizeof(TCP_HEADER);	//tcp长度
-constexpr int c_icmp_head_len   = sizeof(ICMP_HEADER);	//tcp长度
+constexpr int c_icmp_head_len   = sizeof(ICMP_HEADER);	//icmp长度
 
-constexpr int c_udp_fhead_len	= sizeof(FALS_UDP_HEADER);
-constexpr int c_tcp_fhead_len	= sizeof(FALS_TCP_HEADER);
+constexpr int c_udp_fhead_len	= sizeof(FALS_UDP_HEADER);//udp伪头部长度
+constexpr int c_tcp_fhead_len	= sizeof(FALS_TCP_HEADER);//tcp伪头部长度
 
 constexpr int c_mac_data_size	= sizeof(ETH_HEADER);	//以太网数据偏移量
 constexpr int c_ip_head_size	= sizeof(ETH_HEADER) + sizeof(IP_HEADER);	//ip包头总长度
@@ -198,8 +198,8 @@ __interface wb_link_interface
 	virtual bool OnWrite(wb_filter_interface* p_fi, const ETH_PACK* pg, int len) = 0;//从网卡写完网络包
 	virtual bool OnRead(wb_filter_interface* p_fi, void* const lp_link, const ETH_PACK* pg, int len) = 0;//从网卡读取到网络包,len：包总长度
 
-	virtual bool OnRecv(wb_filter_interface* p_fi, void* const lp_link, const char* buf, int len, LPOVERLAPPED pol) = 0;//从网卡读取到网络包,len：包总长度
-	virtual bool OnSend(wb_filter_interface* p_fi, void* const lp_link, const char* buf, int len, LPOVERLAPPED pol) = 0;//从网卡写完网络包
+	virtual bool OnRecv(wb_filter_interface* p_fi, void* const lp_link, const char* buf, int len, LPOVERLAPPED pol) = 0;//从网络层读取到网络包,len：包总长度
+	virtual bool OnSend(wb_filter_interface* p_fi, void* const lp_link, const char* buf, int len, LPOVERLAPPED pol) = 0;//从网络层写完网络包
 	virtual bool OnSend_no_copy(wb_filter_interface* p_fi, void* const lp_link, char* buf, int len) = 0;//数据不进行拷贝
 
 	virtual void set_data(void* pd)=0 ;
